@@ -17,6 +17,12 @@ import {
   HEART, SLEEP_Z, BED, FARMHOUSE, TREE_TOP, TREE_TRUNK, FENCE_POST,
 } from '../sprites/UISprites';
 
+// Crops
+import { CROP_SPRITES } from '../sprites/CropSprites';
+
+// Items
+import { ITEM_ICONS } from '../sprites/ItemSprites';
+
 export interface PlayerAppearance {
   skin: number;
   hair: number;
@@ -67,6 +73,18 @@ export class BootScene extends Phaser.Scene {
     registerPixelTexture(this, 'coin-icon',   COIN_ICON,    1);
     registerPixelTexture(this, 'heart',       HEART,        1);
     registerPixelTexture(this, 'sleep-z',     SLEEP_Z,      1);
+
+    // ── Crop stage sprites ────────────────────────────────────────────────────
+    Object.entries(CROP_SPRITES).forEach(([cropType, stages]) => {
+      stages.forEach((grid, stage) => {
+        registerPixelTexture(this, `crop-${cropType}-${stage}`, grid, 1);
+      });
+    });
+
+    // ── Item icons (12×12 raw) ────────────────────────────────────────────────
+    Object.entries(ITEM_ICONS).forEach(([itemId, grid]) => {
+      registerPixelTexture(this, `icon-${itemId}`, grid, 1);
+    });
 
     // ── Player character (with palette swap) ──────────────────────────────────
     this.registerPlayerTextures(appearance);
