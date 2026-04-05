@@ -27,6 +27,11 @@ import {
   SPRITE_CHURN, SPRITE_MILL, SPRITE_OVEN,
 } from '../sprites/AnimalSprites';
 
+// Environment / unlockable areas
+import {
+  SPRITE_BERRY_BUSH, SPRITE_CAVE_ENTRANCE, SPRITE_MINE_ROCK, SPRITE_STUMP,
+} from '../sprites/EnvironmentSprites';
+
 export type { PlayerAppearance };
 export { DEFAULT_APPEARANCE };
 
@@ -89,6 +94,12 @@ export class BootScene extends Phaser.Scene {
     registerPixelTexture(this, 'churn',   SPRITE_CHURN,   1);
     registerPixelTexture(this, 'mill',    SPRITE_MILL,    1);
     registerPixelTexture(this, 'oven',    SPRITE_OVEN,    1);
+
+    // ── Environment / unlockable areas ────────────────────────────────────────
+    registerPixelTexture(this, 'berry-bush',      SPRITE_BERRY_BUSH,      1);
+    registerPixelTexture(this, 'cave-entrance',   SPRITE_CAVE_ENTRANCE,   1);
+    registerPixelTexture(this, 'mine-rock',       SPRITE_MINE_ROCK,       1);
+    registerPixelTexture(this, 'stump',           SPRITE_STUMP,           1);
 
     // ── Player character (with palette swap) ──────────────────────────────────
     refreshPlayerTextures(this, appearance);
