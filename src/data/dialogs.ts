@@ -25,6 +25,6 @@ export const NPC_HAS_SHOP = new Set<string>(['mabel', 'rosa']);
 
 // Items each shop NPC sells (must have buyPrice > 0 in items.ts)
 export const NPC_SHOP_STOCK: Record<string, string[]> = {
-  mabel: ['turnip_seed', 'carrot_seed', 'wheat_seed', 'pumpkin_seed', 'strawberry_seed'],
+  mabel: ['turnip_seed', 'carrot_seed', 'wheat_seed', 'pumpkin_seed', 'strawberry_seed', 'cow'],
   rosa:  ['axe', 'pickaxe', 'scythe'],
 };

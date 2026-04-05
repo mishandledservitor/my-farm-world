@@ -7,14 +7,19 @@ import { TimeSystem } from '../systems/TimeSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { EnergySystem } from '../systems/EnergySystem';
 import { CropSystem } from '../systems/CropSystem';
+import { AnimalSystem } from '../systems/AnimalSystem';
+import { ProcessingSystem } from '../systems/ProcessingSystem';
 import { EventBus } from '../utils/EventBus';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
 import { HotBar } from '../ui/HotBar';
+import { AnimalPanel } from '../ui/AnimalPanel';
+import { CraftingPanel } from '../ui/CraftingPanel';
 import { getCropBySeed } from '../data/crops';
 import { getItem } from '../data/items';
 
-// Tile type IDs used in the map grid
+// ── Tile type IDs ─────────────────────────────────────────────────────────────
+
 export const TILE = {
   GRASS:        0,
   DIRT:         1,
@@ -35,39 +40,61 @@ const TILE_KEYS: Record<TileId, string> = {
   [TILE.WOOD_FLOOR]:   'tile-wood-floor',
 };
 
-// Tiles the player cannot walk onto
 const BLOCKING_TILES = new Set<TileId>([TILE.WATER]);
 
+// ── Scene ─────────────────────────────────────────────────────────────────────
+
 export class GameScene extends Phaser.Scene {
-  private tileMap!: TileId[][];
+  private tileMap!:    TileId[][];
   private tileImages!: Phaser.GameObjects.Image[][];
-  private player!: Player;
-  private movement!: MovementSystem;
+  private player!:     Player;
+  private movement!:   MovementSystem;
   private interaction!: InteractionSystem;
   private timeSystem!: TimeSystem;
 
   // Core systems
-  private inventory!: InventorySystem;
-  private energySystem!: EnergySystem;
-  private cropSystem!: CropSystem;
-  private hotBar!: HotBar;
+  private inventory!:        InventorySystem;
+  private energySystem!:     EnergySystem;
+  private cropSystem!:       CropSystem;
+  private animalSystem!:     AnimalSystem;
+  private processingSystem!: ProcessingSystem;
 
-  // World objects
+  // UI
+  private hotBar!:        HotBar;
+  private animalPanel:    AnimalPanel | null = null;
+  private craftingPanel:  CraftingPanel | null = null;
+
+  // World object refs
   private farmhouseSprite!: Phaser.GameObjects.Image;
-  private bedObject!: Phaser.GameObjects.Image;
-  private sleepingIn = false;
+  private bedObject!:       Phaser.GameObjects.Image;
+
+  private sleepingIn    = false;
   private transitioning = false;
-  private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
   private coins = 50;
+
+  private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+
+  // Non-walkable barn/station tiles
+  private readonly barnTiles = new Set<string>([
+    '3,10','4,10','3,11','4,11','3,12','4,12',  // barn 2×3 footprint
+    '5,11',                                      // trough
+    '3,13','5,13','7,13',                        // churn, mill, oven
+  ]);
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
   create(): void {
     const save = SaveManager.load();
-    this.coins = save?.coins ?? 50;
+    this.coins        = save?.coins ?? 50;
     this.transitioning = false;
+    this.sleepingIn    = false;
+    this.animalPanel   = null;
+    this.craftingPanel = null;
+
     this.buildTileMap();
     this.renderTiles();
     this.placeWorldObjects();
@@ -87,8 +114,6 @@ export class GameScene extends Phaser.Scene {
     for (let row = 0; row < MAP_ROWS; row++) {
       this.tileMap[row] = [];
       for (let col = 0; col < MAP_COLS; col++) {
-        // Border ring of stone path, rest is grass
-        // Farm plot area (rows 8-18, cols 8-22) has some dirt patches
         const isBorder = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
         this.tileMap[row][col] = isBorder ? TILE.STONE : TILE.GRASS;
       }
@@ -107,14 +132,14 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Small pond in bottom-left area
+    // Small pond
     for (let row = 18; row <= 20; row++) {
       for (let col = 3; col <= 6; col++) {
         this.tileMap[row][col] = TILE.WATER;
       }
     }
 
-    // Stone path leading to village gate (right side, rows 9-12)
+    // Village gate path (right side, rows 9-12)
     for (let row = 9; row <= 12; row++) {
       for (let col = 25; col <= 28; col++) {
         this.tileMap[row][col] = TILE.STONE;
@@ -123,80 +148,53 @@ export class GameScene extends Phaser.Scene {
   }
 
   private renderTiles(): void {
-    const tileDisplay = TILE_SIZE * SCALE;
+    const td = TILE_SIZE * SCALE;
     this.tileImages = [];
-
     for (let row = 0; row < MAP_ROWS; row++) {
       this.tileImages[row] = [];
       for (let col = 0; col < MAP_COLS; col++) {
-        const tileId = this.tileMap[row][col];
-        const key = TILE_KEYS[tileId];
-        const x = col * tileDisplay;
-        const y = row * tileDisplay;
-
-        const img = this.add.image(x, y, key);
-        img.setOrigin(0, 0);
-        img.setScale(SCALE);
-        img.setDepth(0);
+        const img = this.add.image(col * td, row * td, TILE_KEYS[this.tileMap[row][col]]);
+        img.setOrigin(0, 0).setScale(SCALE).setDepth(0);
         this.tileImages[row][col] = img;
       }
     }
   }
 
+  // ── World objects ──────────────────────────────────────────────────────────
+
   private placeWorldObjects(): void {
-    const tileDisplay = TILE_SIZE * SCALE;
+    const td = TILE_SIZE * SCALE;
 
     // Farmhouse at tile (12, 6)
     this.farmhouseSprite = this.add.image(
-      12 * tileDisplay + tileDisplay / 2,
-      6 * tileDisplay + tileDisplay / 2,
-      'farmhouse',
-    );
-    this.farmhouseSprite.setScale(SCALE);
-    this.farmhouseSprite.setDepth(10);
-    this.farmhouseSprite.setOrigin(0.5, 0.5);
+      12 * td + td / 2, 6 * td + td / 2, 'farmhouse',
+    ).setScale(SCALE).setDepth(10);
 
-    // Bed inside the farmhouse (tile 12, 8) — clickable to sleep
+    // Bed — clickable to sleep
     this.bedObject = this.add.image(
-      12 * tileDisplay + tileDisplay / 2,
-      8 * tileDisplay + tileDisplay / 2,
-      'bed',
-    );
-    this.bedObject.setScale(SCALE);
-    this.bedObject.setDepth(9);
-    this.bedObject.setOrigin(0.5, 0.5);
-    this.bedObject.setInteractive({ useHandCursor: true });
+      12 * td + td / 2, 8 * td + td / 2, 'bed',
+    ).setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
     this.bedObject.on('pointerdown', () => this.triggerSleep());
 
-    // Trees along the top-left border
+    // Trees
     const treePositions = [
       { col: 3, row: 3 }, { col: 5, row: 2 }, { col: 7, row: 4 },
       { col: 2, row: 6 }, { col: 4, row: 8 }, { col: 6, row: 6 },
       { col: 25, row: 3 }, { col: 27, row: 2 }, { col: 28, row: 5 },
     ];
     treePositions.forEach(({ col, row }) => {
-      const x = col * tileDisplay + tileDisplay / 2;
-      const yTrunk = row * tileDisplay + tileDisplay / 2;
-      const yTop  = (row - 1) * tileDisplay + tileDisplay / 2;
-
-      const trunk = this.add.image(x, yTrunk, 'tree-trunk');
-      trunk.setScale(SCALE);
-      trunk.setDepth(9);
-
-      const top = this.add.image(x, yTop, 'tree-top');
-      top.setScale(SCALE);
-      top.setDepth(10);
+      const x = col * td + td / 2;
+      this.add.image(x, row * td + td / 2, 'tree-trunk').setScale(SCALE).setDepth(9);
+      this.add.image(x, (row - 1) * td + td / 2, 'tree-top').setScale(SCALE).setDepth(10);
     });
 
-    // Village gate sign (right edge path, row 8)
+    // Village gate sign
     this.add.text(
-      28 * tileDisplay + tileDisplay / 2,
-      8 * tileDisplay + tileDisplay / 2,
-      'VILLAGE →',
+      28 * td + td / 2, 8 * td + td / 2, 'VILLAGE →',
       { fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236', stroke: '#000', strokeThickness: 2 },
     ).setOrigin(0.5, 0.5).setDepth(20);
 
-    // Fence posts around the farm plot
+    // Fence posts around farm plot
     const fencePositions: Array<{ col: number; row: number }> = [];
     for (let col = 17; col <= 24; col++) {
       fencePositions.push({ col, row: 11 });
@@ -207,14 +205,47 @@ export class GameScene extends Phaser.Scene {
       fencePositions.push({ col: 24, row });
     }
     fencePositions.forEach(({ col, row }) => {
-      const fp = this.add.image(
-        col * tileDisplay + tileDisplay / 2,
-        row * tileDisplay + tileDisplay / 2,
-        'fence-post',
-      );
-      fp.setScale(SCALE);
-      fp.setDepth(8);
+      this.add.image(col * td + td / 2, row * td + td / 2, 'fence-post').setScale(SCALE).setDepth(8);
     });
+
+    // ── Barn (tile 4, 11 visual center, 2×3 footprint cols 3-4 rows 10-12) ────
+    const barnX = 4 * td + td / 2;
+    const barnY = 11 * td + td / 2;
+    const barnImg = this.add.image(barnX, barnY, 'barn')
+      .setScale(SCALE).setDepth(11).setInteractive({ useHandCursor: true });
+    barnImg.on('pointerdown', () => this.openAnimalPanel());
+
+    this.add.text(barnX, barnY - td, 'THE BARN', {
+      fontFamily: '"Courier New"', fontSize: '10px', color: '#cbdbfc',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(20);
+
+    // Feed trough (tile 5, 11)
+    const troughImg = this.add.image(5 * td + td / 2, 11 * td + td / 2, 'trough')
+      .setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
+    troughImg.on('pointerdown', () => this.openAnimalPanel());
+
+    // ── Processing stations ────────────────────────────────────────────────────
+    const stations: Array<{ key: string; type: string; col: number; row: number; label: string }> = [
+      { key: 'churn', type: 'churn', col: 3, row: 13, label: 'CHURN' },
+      { key: 'mill',  type: 'mill',  col: 5, row: 13, label: 'MILL'  },
+      { key: 'oven',  type: 'oven',  col: 7, row: 13, label: 'OVEN'  },
+    ];
+
+    for (const s of stations) {
+      const sx = s.col * td + td / 2;
+      const sy = s.row * td + td / 2;
+      const sType = s.type;
+
+      this.add.image(sx, sy, s.key).setScale(SCALE).setDepth(9)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => this.openCraftingPanel(sType));
+
+      this.add.text(sx, sy + td / 2 + 2, s.label, {
+        fontFamily: '"Courier New"', fontSize: '9px', color: '#cbdbfc',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5, 0).setDepth(20);
+    }
   }
 
   // ── Player & systems ───────────────────────────────────────────────────────
@@ -227,48 +258,55 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupSystems(save: SaveFile | null): void {
-    const day = save?.day ?? 1;
+    const day  = save?.day ?? 1;
     const mins = save?.totalMinutes ?? 6 * 60;
     this.timeSystem = new TimeSystem(day, Math.floor(mins / 60));
 
     this.movement = new MovementSystem((x, y) => this.isTileWalkable(x, y));
     this.movement.bind(this.player);
 
-    // Inventory & energy
     this.inventory = new InventorySystem();
     this.inventory.deserialize(save?.inventory ?? []);
 
     this.energySystem = new EnergySystem(save?.energy ?? 100);
 
-    // Crop system
     this.cropSystem = new CropSystem();
     this.cropSystem.deserialize(save?.crops ?? []);
+
+    // Animal system
+    this.animalSystem = new AnimalSystem();
+    this.animalSystem.deserialize(save?.animals ?? defaultSave().animals);
+
+    // Processing system
+    this.processingSystem = new ProcessingSystem();
+    this.processingSystem.deserialize(save?.processingQueues ?? []);
 
     // Restore tile overrides (tilled/watered soil)
     for (const override of (save?.tileOverrides ?? [])) {
       this.setTile(override.tileX, override.tileY, override.tileId as TileId);
     }
 
-    // Rebuild any saved crops visually
+    // Rebuild saved crop sprites
     for (const crop of this.cropSystem.getAllCrops()) {
       this.spawnCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
     }
 
-    // HotBar (runs in GameScene's scene, uses scrollFactor 0)
+    // HotBar
     this.hotBar = new HotBar(this, this.inventory, this.energySystem);
 
-    // InteractionSystem with tool use awareness
+    // InteractionSystem
     this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
       this.handleTileClick(tileX, tileY);
     });
 
-    // Start the clock!
     this.timeSystem.start();
   }
 
-  // ── Tool & crop interaction ────────────────────────────────────────────────
+  // ── Interaction ────────────────────────────────────────────────────────────
 
   private handleTileClick(tileX: number, tileY: number): void {
+    if (this.animalPanel?.isVisible() || this.craftingPanel?.isVisible()) return;
+
     // Harvest takes priority over tools
     if (this.cropSystem.isReadyToHarvest(tileX, tileY)) {
       this.harvestCrop(tileX, tileY);
@@ -278,7 +316,7 @@ export class GameScene extends Phaser.Scene {
     const selectedId = this.inventory.selectedItemId;
     if (!selectedId) return;
 
-    const item = getItem(selectedId);
+    const item   = getItem(selectedId);
     const tileId = this.tileMap[tileY]?.[tileX];
 
     if (item.category === 'tool') {
@@ -299,11 +337,11 @@ export class GameScene extends Phaser.Scene {
         if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
         this.setTile(tileX, tileY, TILE.WATERED_DIRT);
         this.cropSystem.water(tileX, tileY);
-        this.showFloatingText(tileX, tileY, '💧', 0x5fcde4);
+        this.showFloatingText(tileX, tileY, '\u{1F4A7}', 0x5fcde4);
       } else if (tileId === TILE.WATERED_DIRT || this.cropSystem.isOccupied(tileX, tileY)) {
         if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
         this.cropSystem.water(tileX, tileY);
-        this.showFloatingText(tileX, tileY, '💧', 0x5fcde4);
+        this.showFloatingText(tileX, tileY, '\u{1F4A7}', 0x5fcde4);
       }
     }
     this.hotBar.refresh();
@@ -334,21 +372,39 @@ export class GameScene extends Phaser.Scene {
 
     const crop = this.cropSystem.getCrop(tileX, tileY);
     if (!crop) {
-      // Crop removed — destroy sprite
       this.destroyCropSprite(tileX, tileY);
     } else {
-      // Regrows — update sprite to new stage
       this.updateCropSprite(tileX, tileY, crop.cropType, crop.growthStage);
     }
 
     this.inventory.addItem(harvestId, 1);
-    const price = getItem(harvestId).basePrice;
     this.showFloatingText(tileX, tileY, `+${harvestId.charAt(0).toUpperCase() + harvestId.slice(1)}`, 0x99e550);
     this.hotBar.refresh();
   }
 
+  // ── Panel helpers ──────────────────────────────────────────────────────────
+
+  openAnimalPanel(): void {
+    if (this.sleepingIn || this.craftingPanel?.isVisible()) return;
+    if (this.animalPanel?.isVisible()) { this.animalPanel.close(); return; }
+    this.animalPanel = new AnimalPanel(this, this.animalSystem, this.inventory);
+    this.animalPanel.open();
+  }
+
+  openCraftingPanel(stationType: string): void {
+    if (this.sleepingIn || this.animalPanel?.isVisible()) return;
+    // If same station re-clicked, toggle closed
+    if (this.craftingPanel?.isVisible()) { this.craftingPanel.close(); this.craftingPanel = null; }
+    this.craftingPanel = new CraftingPanel(
+      this, this.processingSystem, this.inventory, stationType,
+      () => this.getAbsoluteMinutes(),
+    );
+    this.craftingPanel.open();
+  }
+
+  // ── Crop listener ──────────────────────────────────────────────────────────
+
   private setupCropListeners(): void {
-    // When a new day comes, advance crops and refresh sprites
     EventBus.on('time:new-day', () => {
       this.cropSystem.advanceDay();
       for (const crop of this.cropSystem.getAllCrops()) {
@@ -358,30 +414,24 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  // ── Crop sprite management ─────────────────────────────────────────────────
+  // ── Crop sprites ───────────────────────────────────────────────────────────
 
-  private cropSpriteKey(x: number, y: number): string {
-    return `${x},${y}`;
-  }
+  private cropSpriteKey(x: number, y: number): string { return `${x},${y}`; }
 
   private spawnCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
-    const key = this.cropSpriteKey(tileX, tileY);
     this.destroyCropSprite(tileX, tileY);
-    const tileDisplay = TILE_SIZE * SCALE;
+    const td  = TILE_SIZE * SCALE;
     const img = this.add.image(
-      tileX * tileDisplay + tileDisplay / 2,
-      tileY * tileDisplay + tileDisplay / 2,
-      `crop-${cropType}-${stage}`,
-    );
-    img.setScale(SCALE).setDepth(15);
-    this.cropSprites.set(key, img);
+      tileX * td + td / 2, tileY * td + td / 2, `crop-${cropType}-${stage}`,
+    ).setScale(SCALE).setDepth(15);
+    this.cropSprites.set(this.cropSpriteKey(tileX, tileY), img);
   }
 
   private updateCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
     const img = this.cropSprites.get(this.cropSpriteKey(tileX, tileY));
     if (img) {
-      const textureKey = `crop-${cropType}-${stage}`;
-      if (this.textures.exists(textureKey)) img.setTexture(textureKey);
+      const key = `crop-${cropType}-${stage}`;
+      if (this.textures.exists(key)) img.setTexture(key);
     } else {
       this.spawnCropSprite(tileX, tileY, cropType, stage);
     }
@@ -398,22 +448,18 @@ export class GameScene extends Phaser.Scene {
   setTile(tileX: number, tileY: number, tileId: TileId): void {
     if (tileX < 0 || tileY < 0 || tileX >= MAP_COLS || tileY >= MAP_ROWS) return;
     this.tileMap[tileY][tileX] = tileId;
-    const img = this.tileImages[tileY][tileX];
-    img.setTexture(TILE_KEYS[tileId]);
+    this.tileImages[tileY][tileX].setTexture(TILE_KEYS[tileId]);
   }
 
-  // ── Floating text helper ───────────────────────────────────────────────────
+  // ── Floating text ──────────────────────────────────────────────────────────
 
   private showFloatingText(tileX: number, tileY: number, text: string, color: number): void {
-    const tileDisplay = TILE_SIZE * SCALE;
+    const td    = TILE_SIZE * SCALE;
     const hexStr = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(
-      tileX * tileDisplay + tileDisplay / 2,
-      tileY * tileDisplay,
-      text,
+      tileX * td + td / 2, tileY * td, text,
       { fontFamily: '"Courier New"', fontSize: '13px', color: hexStr, stroke: '#000', strokeThickness: 3 },
-    );
-    t.setOrigin(0.5, 1).setDepth(50);
+    ).setOrigin(0.5, 1).setDepth(50);
     this.tweens.add({
       targets: t, y: t.y - 32, alpha: 0,
       duration: 900, ease: 'Quad.easeOut',
@@ -421,24 +467,26 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Sleep ──────────────────────────────────────────────────────────────────
+
   private setupSleepListeners(): void {
-    // Midnight → forced sleep
     EventBus.on('time:midnight', () => {
       if (!this.sleepingIn) this.triggerSleep();
     });
 
-    // After sleep transition ends → resume game
     EventBus.on('sleep:end', ({ day }) => {
       this.sleepingIn = false;
+      this.animalSystem.advanceDay();
       this.timeSystem.advanceDay();
       this.timeSystem.start();
-      // Broadcast so UIScene updates
       EventBus.emit('time:new-day', { day });
     });
   }
 
   triggerSleep(): void {
     if (this.sleepingIn) return;
+    this.animalPanel?.close();
+    this.craftingPanel?.close();
     this.sleepingIn = true;
     this.timeSystem.pause();
     this.movement.stop();
@@ -450,10 +498,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Save ───────────────────────────────────────────────────────────────────
+
   buildSave(day?: number): SaveFile {
     const base = SaveManager.load() ?? defaultSave();
 
-    // Collect tile overrides (tilled/watered tiles)
     const tileOverrides: Array<{ tileX: number; tileY: number; tileId: number }> = [];
     for (let row = 0; row < MAP_ROWS; row++) {
       for (let col = 0; col < MAP_COLS; col++) {
@@ -466,34 +515,38 @@ export class GameScene extends Phaser.Scene {
 
     return {
       ...base,
-      day: day ?? this.timeSystem.day,
-      totalMinutes: this.timeSystem.minutesElapsed,
-      coins: this.coins,
-      playerTileX: this.player.tileX,
-      playerTileY: this.player.tileY,
-      currentScene: 'GameScene',
-      inventory: this.inventory.serialize(),
-      crops: this.cropSystem.serialize(),
-      energy: this.energySystem.serialize(),
+      day:              day ?? this.timeSystem.day,
+      totalMinutes:     this.timeSystem.minutesElapsed,
+      coins:            this.coins,
+      playerTileX:      this.player.tileX,
+      playerTileY:      this.player.tileY,
+      currentScene:     'GameScene',
+      inventory:        this.inventory.serialize(),
+      crops:            this.cropSystem.serialize(),
+      energy:           this.energySystem.serialize(),
+      animals:          this.animalSystem.serialize(),
+      processingQueues: this.processingSystem.serialize(),
       tileOverrides,
     };
   }
 
+  // ── Walkability ────────────────────────────────────────────────────────────
+
   private isTileWalkable(x: number, y: number): boolean {
     if (x < 0 || y < 0 || x >= MAP_COLS || y >= MAP_ROWS) return false;
-    const tileId = this.tileMap[y][x];
-    if (BLOCKING_TILES.has(tileId)) return false;
-    // House occupies tiles 11-13 × 4-8 (rough blockade)
+    if (BLOCKING_TILES.has(this.tileMap[y][x])) return false;
+    // Farmhouse area
     if (x >= 11 && x <= 13 && y >= 4 && y <= 9) return false;
+    // Barn, trough, and station tiles
+    if (this.barnTiles.has(`${x},${y}`)) return false;
     return true;
   }
 
-  private setupCamera(): void {
-    const tileDisplay = TILE_SIZE * SCALE;
-    const worldW = MAP_COLS * tileDisplay;
-    const worldH = MAP_ROWS * tileDisplay;
+  // ── Camera & UI ────────────────────────────────────────────────────────────
 
-    this.cameras.main.setBounds(0, 0, worldW, worldH);
+  private setupCamera(): void {
+    const td = TILE_SIZE * SCALE;
+    this.cameras.main.setBounds(0, 0, MAP_COLS * td, MAP_ROWS * td);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(CANVAS_WIDTH * 0.25, CANVAS_HEIGHT * 0.25);
   }
@@ -507,15 +560,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   private disableContextMenu(): void {
-    // Prevent right-click context menu on the canvas
     this.game.canvas.addEventListener('contextmenu', e => e.preventDefault());
   }
 
-  // ── Update loop ────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /** Absolute game-minute across all days; used by ProcessingSystem. */
+  getAbsoluteMinutes(): number {
+    return (this.timeSystem.day - 1) * 1440 + this.timeSystem.minutesElapsed;
+  }
+
+  getTimeSystem(): TimeSystem { return this.timeSystem; }
+  getPlayer():     Player     { return this.player; }
+
+  // ── Village transition ─────────────────────────────────────────────────────
 
   private triggerVillageTransition(): void {
     if (this.transitioning) return;
     this.transitioning = true;
+    this.animalPanel?.close();
+    this.craftingPanel?.close();
     this.movement.stop();
     this.timeSystem.pause();
     SaveManager.save(this.buildSave());
@@ -527,28 +591,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Update ─────────────────────────────────────────────────────────────────
+
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
 
-    // Village gate: walk to right edge path
     if (
       !this.transitioning &&
       !this.sleepingIn &&
+      !this.animalPanel?.isVisible() &&
+      !this.craftingPanel?.isVisible() &&
       this.player.tileX >= 28 &&
       this.player.tileY >= 9 && this.player.tileY <= 12
     ) {
       this.triggerVillageTransition();
     }
-  }
-
-  // ── Public accessors (used by UIScene via EventBus) ────────────────────────
-
-  getTimeSystem(): TimeSystem {
-    return this.timeSystem;
-  }
-
-  getPlayer(): Player {
-    return this.player;
   }
 }

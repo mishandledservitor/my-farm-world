@@ -132,6 +132,13 @@ export const ITEMS: Record<string, ItemDefinition> = {
     description: 'Aged from milk. Village specialty.',
   },
 
+  // ── Livestock ─────────────────────────────────────────────────────────────
+  cow: {
+    id: 'cow', name: 'Cow', category: 'misc',
+    basePrice: 0, buyPrice: 500, stackable: false, maxStack: 1,
+    description: 'A dairy cow. Bring her to the barn to produce milk each day.',
+  },
+
   // ── Resources ──────────────────────────────────────────────────────────────
   wood: {
     id: 'wood', name: 'Wood', category: 'resource',
