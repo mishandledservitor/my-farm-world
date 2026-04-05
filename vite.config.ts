@@ -6,7 +6,7 @@ export default defineConfig({
     VITE_APP_VERSION: JSON.stringify('0.1.0'),
   },
   server: {
-    port: 3000,
+    port: Number(process.env.VITE_PORT) || 3000,
   },
   build: {
     outDir: 'dist',
