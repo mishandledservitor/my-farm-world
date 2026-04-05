@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants/GameConfig';
 import { ProcessingSystem, RECIPES } from '../systems/ProcessingSystem';
 import { InventorySystem } from '../systems/InventorySystem';
+import { getItem } from '../data/items';
 
 const STATION_TITLES: Record<string, string> = {
   churn: 'BUTTER CHURN',
@@ -91,7 +92,11 @@ export class CraftingPanel {
       const elapsed   = now - job.startTime;
       const remaining = Math.max(0, job.durationMinutes - elapsed);
 
-      add(this.scene.add.text(px + 20, cy, `Processing:  ${job.inputItemId}  →  ${job.outputItemId}`, {
+      let jobIn  = job.inputItemId;
+      let jobOut = job.outputItemId;
+      try { jobIn  = getItem(job.inputItemId).name;  } catch { /* ok */ }
+      try { jobOut = getItem(job.outputItemId).name; } catch { /* ok */ }
+      add(this.scene.add.text(px + 20, cy, `Processing:  ${jobIn}  \u2192  ${jobOut}`, {
         fontFamily: '"Courier New"', fontSize: '14px', color: '#ffffff',
       }).setScrollFactor(0).setDepth(181));
       cy += 34;
@@ -150,11 +155,17 @@ export class CraftingPanel {
         const col      = hasInput ? '#ffffff' : '#595652';
         const btnCol   = hasInput ? '#99e550' : '#595652';
 
+        let inputName  = recipe.inputItemId;
+        let outputName = recipe.outputItemId;
+        try { inputName  = getItem(recipe.inputItemId).name;  } catch { /* unknown item */ }
+        try { outputName = getItem(recipe.outputItemId).name; } catch { /* unknown item */ }
+
         add(this.scene.add.text(px + 20, cy,
-          `${recipe.inputItemId} (have: ${qty})  \u2192  ${recipe.outputItemId}   [${recipe.durationMinutes} min]`, {
+          `${inputName} ×1 (have: ${qty})  \u2192  ${outputName}  [${recipe.durationMinutes} min]`, {
           fontFamily: '"Courier New"', fontSize: '13px', color: col,
         }).setScrollFactor(0).setDepth(181));
 
+        const capturedRecipe = recipe;
         const startBtn = add(this.scene.add.text(px + PW - 90, cy, '[START]', {
           fontFamily: '"Courier New"', fontSize: '13px', color: btnCol,
         }).setScrollFactor(0).setDepth(181)) as Phaser.GameObjects.Text;
@@ -164,8 +175,13 @@ export class CraftingPanel {
           startBtn.on('pointerover', () => startBtn.setColor('#ffffff'));
           startBtn.on('pointerout',  () => startBtn.setColor(btnCol));
           startBtn.on('pointerdown', () => {
-            this.inventory.removeItem(recipe.inputItemId, 1);
-            this.processingSystem.startJob(this.stationType, recipe.inputItemId, this.getAbsoluteMinutes());
+            this.inventory.removeItem(capturedRecipe.inputItemId, 1);
+            this.processingSystem.startJob(
+              this.stationType,
+              capturedRecipe.inputItemId,
+              this.getAbsoluteMinutes(),
+              capturedRecipe.outputItemId,
+            );
             this.rebuild();
           });
         }

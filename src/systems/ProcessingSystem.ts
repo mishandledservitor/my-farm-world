@@ -15,11 +15,16 @@ export interface ProcessingJob {
   durationMinutes: number;
 }
 
-/** One recipe per station for v0.6. */
 export const RECIPES: ProcessingRecipe[] = [
-  { stationType: 'churn', inputItemId: 'milk',  outputItemId: 'butter', durationMinutes: 60  },
-  { stationType: 'mill',  inputItemId: 'wheat', outputItemId: 'flour',  durationMinutes: 30  },
-  { stationType: 'oven',  inputItemId: 'flour', outputItemId: 'bread',  durationMinutes: 120 },
+  // Churn
+  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'butter', durationMinutes: 60  },
+  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'cheese', durationMinutes: 180 },
+  // Mill
+  { stationType: 'mill',  inputItemId: 'wheat',      outputItemId: 'flour',  durationMinutes: 30  },
+  // Oven
+  { stationType: 'oven',  inputItemId: 'flour',      outputItemId: 'bread',  durationMinutes: 120 },
+  { stationType: 'oven',  inputItemId: 'strawberry', outputItemId: 'jam',    durationMinutes: 90  },
+  { stationType: 'oven',  inputItemId: 'berry',      outputItemId: 'jam',    durationMinutes: 90  },
 ];
 
 export class ProcessingSystem {
@@ -39,10 +44,12 @@ export class ProcessingSystem {
   }
 
   /** Start a new job; returns the job or null if station busy or recipe unknown. */
-  startJob(stationType: string, inputItemId: string, absoluteMinute: number): ProcessingJob | null {
+  startJob(stationType: string, inputItemId: string, absoluteMinute: number, outputItemId?: string): ProcessingJob | null {
     if (!this.isIdle(stationType)) return null;
-    const recipe = RECIPES.find(
-      r => r.stationType === stationType && r.inputItemId === inputItemId,
+    const recipe = RECIPES.find(r =>
+      r.stationType === stationType &&
+      r.inputItemId === inputItemId &&
+      (outputItemId === undefined || r.outputItemId === outputItemId),
     );
     if (!recipe) return null;
     const job: ProcessingJob = {

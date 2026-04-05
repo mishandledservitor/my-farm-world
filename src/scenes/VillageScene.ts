@@ -454,10 +454,10 @@ export class VillageScene extends Phaser.Scene {
 
     this.shopPanel = new ShopPanel(
       this, this.inventory, stock, shopTitle, this.coins,
-      (newCoins) => {
+      (newCoins, qtySold) => {
         if (newCoins > this.coins) {
           this.lifetimeCoinsEarned += newCoins - this.coins;
-          this.lifetimeItemsSold   += 1;
+          this.lifetimeItemsSold   += qtySold;
           this.tutorialSystem.advanceIfAt('sell');
         }
         this.coins = newCoins;
