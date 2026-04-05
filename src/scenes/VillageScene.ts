@@ -16,9 +16,11 @@ import { TutorialSystem } from '../systems/TutorialSystem';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { UnlockSystem } from '../systems/UnlockSystem';
 import { NPC_DEFS } from '../sprites/NPCSprites';
-import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK } from '../data/dialogs';
+import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK, getFinnDialog } from '../data/dialogs';
 import { PetEntity } from '../entities/PetEntity';
 import { addHoverHighlight } from '../utils/PixelArtUtils';
+import { getSeasonFromDay } from '../utils/SeasonUtils';
+import { getEffectiveSellPrice } from '../data/items';
 
 // ── Village map constants ─────────────────────────────────────────────────────
 
@@ -435,7 +437,17 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private openDialog(npcId: string): void {
-    const lines = NPC_DIALOGS[npcId];
+    let lines = NPC_DIALOGS[npcId];
+
+    // Contextual Finn dialog
+    if (npcId === 'finn') {
+      const save      = SaveManager.load();
+      const hasAxe    = save?.inventory.some(s => s.itemId === 'axe') ?? false;
+      const forestUnlocked = save ? UnlockSystem.isForestUnlocked(save) : false;
+      const mineUnlocked   = save ? UnlockSystem.isMineUnlocked(save)   : false;
+      lines = getFinnDialog(this.timeSystem.day, hasAxe, forestUnlocked, mineUnlocked);
+    }
+
     if (!lines?.length) return;
 
     this.timeSystem.pause();
@@ -452,6 +464,8 @@ export class VillageScene extends Phaser.Scene {
     const stock     = NPC_SHOP_STOCK[npcId] ?? [];
     const shopTitle = npcId === 'mabel' ? "MABEL'S SHOP" : "ROSA'S TOOLS";
 
+    const currentSeason = getSeasonFromDay(this.timeSystem.day);
+
     this.shopPanel = new ShopPanel(
       this, this.inventory, stock, shopTitle, this.coins,
       (newCoins, qtySold) => {
@@ -462,11 +476,14 @@ export class VillageScene extends Phaser.Scene {
         }
         this.coins = newCoins;
       },
+      // Seasonal price modifier
+      (itemId, basePrice) => getEffectiveSellPrice(itemId, currentSeason),
     );
     // Cat bonus: +10% sell price
     if (this.pets.some(p => p.petType === 'cat')) {
       this.shopPanel.sellMultiplier = 1.1;
     }
+    this.shopPanel.seasonalPrices = true;
     this.shopPanel.open(this.coins);
   }
 

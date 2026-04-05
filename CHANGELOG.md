@@ -1,0 +1,192 @@
+# Changelog
+
+All notable changes to My Farm World are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [v1.2] — 2026-04-06
+
+### Added
+- **Seasonal sell price bonuses** (`src/data/items.ts`): In-season crops sell for a premium at Mabel's shop.
+  - Spring: Turnip ×1.3, Carrot ×1.3
+  - Summer: Strawberry ×1.4
+  - Fall: Pumpkin ×1.5
+  - Winter: Egg ×1.25, Milk ×1.25
+  The bonus stacks with the cat's +10% multiplier.
+- `getEffectiveSellPrice(itemId, season, extraMultiplier)` helper in `items.ts`.
+- `SEASONAL_PRICE_BONUS` lookup table in `items.ts`.
+- `ShopPanel.seasonalPrices` flag; when set, the sell column header shows "SELL ✦ seasonal prices".
+- `ShopPanel` constructor now accepts an optional `PriceModFn` callback for per-item price overrides.
+- **New Game confirmation dialog**: Clicking "NEW GAME" when a save exists now shows a "Your save will be lost — [YES] / [CANCEL]" modal before proceeding. The old save is explicitly deleted on confirmation.
+- **Contextual Finn dialog** (`src/data/dialogs.ts`): `getFinnDialog(day, hasAxe, forestUnlocked, mineUnlocked)` returns one of five context-sensitive dialog sets:
+  - Early game (default): hints about the village and axe.
+  - Day 7+ without axe: encourages buying an axe from Rosa for the forest.
+  - Forest unlocked: tips about jam-making and wood selling.
+  - Day 15+ mine locked: hints about earning 1000 coins for mine access.
+  - Mine unlocked: tips about gold ore and pickaxe usage.
+  VillageScene calls `getFinnDialog` on each NPC interaction to pick the right lines.
+
+### Changed
+- `ShopPanel.open()` now uses `priceModFn(itemId, basePrice)` for sell-price display and transaction math, replacing the previous fixed `item.basePrice` calculation.
+
+---
+
+## [v1.1] — 2026-04-06
+
+### Added
+- **Crafting recipes**: Churn now offers `milk → cheese` (180 min). Oven now offers `strawberry → jam` and `wild berry → jam` (90 min each).
+- **Crafting panel improvement**: Recipe list and active-job display now shows proper item names (e.g. "Milk" instead of "milk").
+- `ProcessingSystem.startJob` accepts optional `outputItemId` to disambiguate multiple recipes with the same input ingredient.
+
+### Fixed
+- `lifetimeItemsSold` in VillageScene now counts actual stack size sold (e.g. selling 10 turnips at once counts as 10 toward the cat-adoption threshold, not 1).
+- Buy transactions no longer accidentally increment the sold-items counter.
+
+---
+
+## [v1.0] — 2026-04-06
+
+### Added
+- **Season system** (`src/utils/SeasonUtils.ts`): 30-day seasons cycling Spring → Summer → Fall → Winter → repeat. Helper functions: `getSeasonFromDay`, `getDayOfSeason`, `isLastDayOfSeason`, `seasonLabel`, `seasonColor`.
+- **Season display in HUD**: Clock panel now shows season name + day-of-season (e.g. "Day 15  (Spring 15)") in a season-tinted colour.
+- **Season-complete card**: `SleepTransitionScene` shows "Spring Complete!" / "Summer Complete!" etc. when a season ends instead of the normal "Day N" card.
+- **Season-restricted planting**: Attempting to plant a crop in the wrong season shows a floating message (e.g. "Fall only!"). `CropSystem.canPlantInSeason()` static helper.
+- **Crop withering**: `CropSystem.advanceDay(season)` now removes crops whose season doesn't match the new day's season and returns the tile keys so the caller can remove sprites and show "Withered!" floating text.
+- **Hover highlights**: `addHoverHighlight()` in `PixelArtUtils` applies a blue-white tint on pointer-over. Applied to: bed, barn, feed trough, churn, mill, oven (GameScene); cave entrance (VillageScene).
+- **NPC idle animation**: NPCs in VillageScene now have a gentle up-down bob tween with randomised timing.
+- **Correct save-scene routing**: Main Menu "Continue" now starts the exact scene the player saved in (GameScene, VillageScene, ForestScene, or MineScene).
+- **Unit tests** (38 tests via Vitest): `SeasonUtils`, `CropSystem`, `UnlockSystem`, `SaveManager`.
+- `crop:withered` event added to `EventBus` type map.
+- Version string updated to `v1.0` in Main Menu and HUD.
+
+### Changed
+- `CropSystem.advanceDay()` signature changed to accept an optional `SeasonName` parameter.
+
+---
+
+## [v0.9] — 2026-04-05
+
+### Added
+- **Pet sprites** (`src/sprites/PetSprites.ts`): 16×16 pixel-art dog (brown) and cat (grey, green eyes).
+- **PetEntity** (`src/entities/PetEntity.ts`): tile-based follow movement with 600 ms step interval; teleports to player if distance > 5 tiles; click-to-pet spawns floating hearts and increments happiness.
+- **Dog adoption**: ForestScene cutscene on Day 10 (if no dog yet) — "A dog is whimpering nearby!" modal with [ADOPT] / [LEAVE] buttons. Dog is named "Buddy".
+- **Dog crop-ready alert**: On each new-day event, if the player owns a dog and any crops are harvest-ready, a floating "Dog: N crops ready!" notification appears.
+- **Cat adoption**: VillageScene offers a cat after 50 total items sold — "Mabel: This stray keeps visiting..." modal. Cat is named "Luna".
+- **Cat sell bonus**: When Luna is in the player's party, all sell transactions in ShopPanel apply `sellMultiplier = 1.1` (+10% sell price).
+- **Pet following in all scenes**: GameScene, ForestScene, VillageScene, MineScene all spawn saved pets on load and update them each frame.
+- `ShopPanel.sellMultiplier` property (default 1.0) applied to both sell-price display and actual transaction.
+- Pets are serialised through `SaveFile.pets` on every scene transition.
+
+---
+
+## [v0.8] — 2026-04-05
+
+### Added
+- **UnlockSystem** (`src/systems/UnlockSystem.ts`): static helpers `isForestUnlocked` (Day ≥ 7 + axe) and `isMineUnlocked` (lifetimeCoinsEarned ≥ 1000).
+- **ForestScene** (`src/scenes/ForestScene.ts`): 20×15 map; 18 choppable trees (axe required, costs 3 energy, drops 1–3 wood); 6 harvestable berry bushes; south exit returns to farm; scene header "WHISPERING FOREST".
+- **MineScene** (`src/scenes/MineScene.ts`): 20×15 map; 5 floors; rocks increase per floor; loot table (stone / iron ore / gold ore) biased by floor depth; ladder UP/DOWN navigation; pickaxe required to mine (costs 2 energy).
+- **Items**: `axe` (200g from Rosa), `pickaxe` (300g from Rosa), `wood`, `stone`, `iron_ore`, `gold_ore`, `berry` items.
+- **Environment sprites** (`src/sprites/EnvironmentSprites.ts`): `SPRITE_BERRY_BUSH`, `SPRITE_CAVE_ENTRANCE`, `SPRITE_MINE_ROCK`, `SPRITE_STUMP`; icon sprites for wood, berry, stone, iron ore, gold ore.
+- **Axe and pickaxe icons** added to `ItemSprites.ts` / `ITEM_ICONS`.
+- **Forest gate** in GameScene: north end of stone path; locked until Day 7 + axe; locked message "Day 7 + Axe needed" if attempted early.
+- **Mine entrance** in VillageScene at tile (17,7): cave-entrance sprite; locked until 1000 lifetime coins; shows "Earn N more coins" if locked.
+- `lifetimeCoinsEarned` and `lifetimeItemsSold` tracked and persisted in VillageScene / SaveFile.
+- GameScene full north–south stone path (cols 14–15, rows 1–22).
+- `SaveFile.unlockedAreas` field (was already in schema).
+- ForestScene and MineScene registered in `main.ts`.
+
+---
+
+## [v0.7] — 2026-04-04
+
+### Added
+- **TutorialSystem** (`src/systems/TutorialSystem.ts`): state-machine with ~15 named steps advancing via `advanceIfAt(stepName)`.
+- **TutorialPopup** (`src/ui/TutorialPopup.ts`): floating arrow + text overlay rendered in-scene; skippable via [SKIP] button; subscribes to scene-specific step names.
+- Tutorial steps wired into GameScene (hoe, water, plant, sleep, harvest, village) and VillageScene (sell).
+- Tutorial state persisted to `SaveFile.tutorialStep` across all scenes.
+
+---
+
+## [v0.6] — 2026-04-03
+
+### Added
+- **AnimalSystem** (`src/systems/AnimalSystem.ts`): chickens and cows; hunger (0–100); `advanceDay` produces egg/milk if hunger < 80; `feedAll()` resets hunger.
+- **AnimalPanel** (`src/ui/AnimalPanel.ts`): lists all animals with hunger bar; [FEED] and [COLLECT] buttons.
+- Barn + trough + processing stations placed in GameScene.
+- Default save includes one chicken ("Clucky").
+- **ProcessingSystem** (`src/systems/ProcessingSystem.ts`): 3 stations (churn, mill, oven); one active job per station; progress bar.
+- **CraftingPanel** (`src/ui/CraftingPanel.ts`): shows available recipes and active-job progress; [START] / [COLLECT] buttons.
+- Recipes: `milk → butter` (60 min), `wheat → flour` (30 min), `flour → bread` (120 min).
+- Items: egg, milk, butter, flour, bread, jam, cheese, cow.
+- `SaveFile.processingQueues` field; `getAbsoluteMinutes()` in GameScene.
+
+---
+
+## [v0.5] — 2026-04-02
+
+### Added
+- **VillageScene** (`src/scenes/VillageScene.ts`): 20×15 map; stone road; three NPCs (Mabel, Finn, Rosa); buildings.
+- **DialogBox** (`src/ui/DialogBox.ts`): multi-line NPC dialog, click-to-advance.
+- **ShopPanel** (`src/ui/ShopPanel.ts`): sell crops/resources; buy seeds/tools; coin tracking.
+- `NPC_DIALOGS`, `NPC_HAS_SHOP`, `NPC_SHOP_STOCK` in `src/data/dialogs.ts`.
+- Coin display in HUD (via `coins:changed` event).
+- GameScene east-border transition to VillageScene; VillageScene west-gate return.
+- `SaveFile.coins`, `SaveFile.lifetimeCoinsEarned`, `SaveFile.lifetimeItemsSold` fields.
+
+---
+
+## [v0.4] — 2026-04-01
+
+### Added
+- **MainMenuScene**: New Game / Continue buttons; save summary.
+- **CharacterCustomScene**: 5 skin tones, 8 hair colours, 8 shirt colours; appearance stored in save.
+- Palette-swap system: player sprite regenerated with chosen colours on load.
+- `AppearanceSave` in SaveSchema; `refreshPlayerTextures` / `registerNPCTextures` in `PlayerTextureUtils`.
+
+---
+
+## [v0.3] — 2026-03-31
+
+### Added
+- **InventoryPanel** (24 slots) + **HotBar** (8 hotbar slots) with slot highlights and item icons.
+- Hoe tool: click grass → dirt (costs 2 energy).
+- Watering can: click dirt/crop → watered (costs 1 energy).
+- Seed items (turnip, carrot, wheat, pumpkin, strawberry); plant on tilled/watered soil.
+- **CropSystem** (`src/systems/CropSystem.ts`): growth stages; advance-on-new-day; harvest on click.
+- **EnergySystem** (`src/systems/EnergySystem.ts`): 100-point bar; full restore on sleep.
+- Energy bar in HotBar; Too-tired floating text.
+- Crop sprites (per-type, per-stage) rendered in GameScene.
+- `SaveFile.crops`, `SaveFile.tileOverrides`, `SaveFile.energy` fields.
+- Farm plot (dirt tiles), pond (water), fence posts placed in GameScene.
+
+---
+
+## [v0.2] — 2026-03-30
+
+### Added
+- **TimeSystem** active: 1 real second = 1 game minute by default.
+- Clock display in UIScene (6 AM → midnight); turns red after 9 PM.
+- Midnight forced-sleep trigger via `time:midnight` event.
+- Bed object in GameScene (click to sleep early).
+- **SleepTransitionScene**: fade to black → "Day N" title card → `sleep:end` event.
+- Autosave to `localStorage` on every sleep.
+- `SaveFile.day`, `SaveFile.totalMinutes` persisted and restored on load.
+
+---
+
+## [v0.1] — 2026-03-29
+
+### Added
+- Vite 5 + TypeScript 5 strict + Phaser 3 project scaffold.
+- `BootScene`: registers all pixel-art textures programmatically via `RenderTexture`.
+- `GameScene`: 30×24 grass tile map; stone border; farmhouse; decorative trees; fence posts; village path.
+- `Player` entity: 16×16 sprite with walk (4-frame) and idle animations in 4 directions.
+- `MovementSystem`: A* pathfinding (`AStarPathfinder.ts`); smooth pixel-lerp between tiles; `PLAYER_SPEED_TILES_PER_SECOND` constant.
+- `InteractionSystem`: left-click → move or interact; click-ring visual indicator.
+- `UIScene` (parallel): day counter, tile coordinates (debug), version watermark.
+- Camera lerp-follow with deadzone.
+- `EventBus` typed pub/sub (`src/utils/EventBus.ts`).
+- `ColorPalette` (DB32 subset) in `src/utils/ColorPalette.ts`.
+- All terrain and UI sprites defined as `number[][]` pixel grids.
+- `SaveManager` + `SaveSchema` (localStorage JSON).

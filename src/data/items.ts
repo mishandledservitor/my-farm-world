@@ -172,3 +172,27 @@ export function getItem(id: string): ItemDefinition {
   if (!item) throw new Error(`Unknown item: ${id}`);
   return item;
 }
+
+/**
+ * Seasonal price multipliers for sellable items.
+ * Crops sell for a bonus in their native season; processed goods are stable.
+ */
+export const SEASONAL_PRICE_BONUS: Record<string, Partial<Record<string, number>>> = {
+  turnip:     { spring: 1.3 },
+  carrot:     { spring: 1.3 },
+  strawberry: { summer: 1.4 },
+  pumpkin:    { fall:   1.5 },
+  egg:        { winter: 1.25 },
+  milk:       { winter: 1.25 },
+};
+
+/** Returns the effective sell price after seasonal and any other multipliers. */
+export function getEffectiveSellPrice(
+  itemId: string,
+  season: string,
+  extraMultiplier = 1.0,
+): number {
+  const item = getItem(itemId);
+  const seasonBonus = SEASONAL_PRICE_BONUS[itemId]?.[season] ?? 1.0;
+  return Math.floor(item.basePrice * seasonBonus * extraMultiplier);
+}
