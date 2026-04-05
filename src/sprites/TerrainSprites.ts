@@ -1,0 +1,95 @@
+import { C } from '../utils/ColorPalette';
+
+const _ = C.TRANSPARENT;
+
+// 16×16 tile definitions
+
+// Lush grass tile
+export const TILE_GRASS: number[][] = [
+  [C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.DARK_GREEN],
+  [C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN],
+  [C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN],
+  [C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN     ],
+  [C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN],
+  [C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.PALE_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN     ],
+  [C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN,      C.GREEN,      C.GREEN,      C.DARK_GREEN, C.GREEN,      C.GREEN     ],
+];
+
+// Tilled dirt tile
+export const TILE_DIRT: number[][] = [
+  [C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN      ],
+  [C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN],
+  [C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN      ],
+  [C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN      ],
+  [C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN ],
+  [C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN      ],
+  [C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN],
+  [C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN      ],
+  [C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN      ],
+  [C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.DARK_BROWN,  C.BROWN,       C.BROWN,       C.BROWN,       C.DARK_BROWN ],
+  [C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN,       C.BROWN,       C.BROWN,       C.LIGHT_BROWN, C.BROWN      ],
+];
+
+// Watered dirt (darker, with moisture sheen)
+export const TILE_WATERED_DIRT: number[][] = TILE_DIRT.map(row =>
+  row.map(c => {
+    if (c === C.LIGHT_BROWN) return C.DARK_BROWN;
+    if (c === C.BROWN) return C.DARK_BROWN;
+    return C.ALMOST_BLACK;
+  }),
+);
+
+// Stone path tile
+export const TILE_STONE: number[][] = [
+  [C.DARK_GREY,  C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.MID_GREY,   C.DARK_GREY,  C.DARK_GREY,  C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.MID_GREY,   C.DARK_GREY,  C.DARK_GREY,  C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY],
+  [C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.MID_GREY  ],
+  [C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY  ],
+  [C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY  ],
+  [C.DARK_GREY,  C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.DARK_GREY ],
+  [C.DARK_GREY,  C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.DARK_GREY ],
+  [C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY  ],
+  [C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY  ],
+  [C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY  ],
+  [C.DARK_GREY,  C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.DARK_GREY ],
+  [C.DARK_GREY,  C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.DARK_GREY ],
+  [C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY  ],
+  [C.MID_GREY,   C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY  ],
+  [C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,   C.MID_GREY  ],
+  [C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY,   C.MID_GREY  ],
+  [C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY,  C.DARK_GREY ],
+  [C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK, C.ALMOST_BLACK],
+];
+
+// Water tile (for future use)
+export const TILE_WATER: number[][] = Array.from({ length: 16 }, (_, row) =>
+  Array.from({ length: 16 }, (_, col) => {
+    const wave = (row + col) % 4;
+    if (wave === 0) return C.PALE_BLUE;
+    if (wave === 1) return C.LIGHT_BLUE;
+    if (wave === 2) return C.BLUE;
+    return C.DARK_BLUE;
+  }),
+);
+
+// Farmhouse floor interior tile
+export const TILE_WOOD_FLOOR: number[][] = Array.from({ length: 16 }, (_, row) =>
+  Array.from({ length: 16 }, (_, col) => {
+    const stripe = Math.floor(col / 3) % 2;
+    if (row === 0 || row === 15) return C.DARK_BROWN;
+    return stripe ? C.LIGHT_BROWN : C.ORANGE;
+  }),
+);
