@@ -9,12 +9,14 @@ import { EnergySystem } from '../systems/EnergySystem';
 import { CropSystem } from '../systems/CropSystem';
 import { AnimalSystem } from '../systems/AnimalSystem';
 import { ProcessingSystem } from '../systems/ProcessingSystem';
+import { TutorialSystem } from '../systems/TutorialSystem';
 import { EventBus } from '../utils/EventBus';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
 import { HotBar } from '../ui/HotBar';
 import { AnimalPanel } from '../ui/AnimalPanel';
 import { CraftingPanel } from '../ui/CraftingPanel';
+import { TutorialPopup } from '../ui/TutorialPopup';
 import { getCropBySeed } from '../data/crops';
 import { getItem } from '../data/items';
 
@@ -60,9 +62,11 @@ export class GameScene extends Phaser.Scene {
   private processingSystem!: ProcessingSystem;
 
   // UI
-  private hotBar!:        HotBar;
-  private animalPanel:    AnimalPanel | null = null;
-  private craftingPanel:  CraftingPanel | null = null;
+  private hotBar!:          HotBar;
+  private animalPanel:      AnimalPanel | null = null;
+  private craftingPanel:    CraftingPanel | null = null;
+  private tutorialSystem!:  TutorialSystem;
+  private tutorialPopup!:   TutorialPopup;
 
   // World object refs
   private farmhouseSprite!: Phaser.GameObjects.Image;
@@ -105,6 +109,10 @@ export class GameScene extends Phaser.Scene {
     this.setupCropListeners();
     this.launchUI();
     this.disableContextMenu();
+
+    // Tutorial — created after all systems exist
+    this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'GameScene');
+    this.events.once('shutdown', () => this.tutorialPopup.destroy());
   }
 
   // ── Map setup ──────────────────────────────────────────────────────────────
@@ -281,6 +289,9 @@ export class GameScene extends Phaser.Scene {
     this.processingSystem = new ProcessingSystem();
     this.processingSystem.deserialize(save?.processingQueues ?? []);
 
+    // Tutorial
+    this.tutorialSystem = new TutorialSystem(save?.tutorialStep ?? 0);
+
     // Restore tile overrides (tilled/watered soil)
     for (const override of (save?.tileOverrides ?? [])) {
       this.setTile(override.tileX, override.tileY, override.tileId as TileId);
@@ -332,16 +343,19 @@ export class GameScene extends Phaser.Scene {
       if (!this.energySystem.spend(2)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
       this.setTile(tileX, tileY, TILE.DIRT);
       this.showFloatingText(tileX, tileY, '+Till', 0xc8956b);
+      this.tutorialSystem.advanceIfAt('hoe');
     } else if (toolId === 'watering_can') {
       if (tileId === TILE.DIRT) {
         if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
         this.setTile(tileX, tileY, TILE.WATERED_DIRT);
         this.cropSystem.water(tileX, tileY);
         this.showFloatingText(tileX, tileY, '\u{1F4A7}', 0x5fcde4);
+        this.tutorialSystem.advanceIfAt('water');
       } else if (tileId === TILE.WATERED_DIRT || this.cropSystem.isOccupied(tileX, tileY)) {
         if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
         this.cropSystem.water(tileX, tileY);
         this.showFloatingText(tileX, tileY, '\u{1F4A7}', 0x5fcde4);
+        this.tutorialSystem.advanceIfAt('water');
       }
     }
     this.hotBar.refresh();
@@ -363,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnCropSprite(tileX, tileY, cropDef.id, 0);
     this.hotBar.refresh();
     this.showFloatingText(tileX, tileY, 'Planted!', 0x99e550);
+    this.tutorialSystem.advanceIfAt('plant');
   }
 
   private harvestCrop(tileX: number, tileY: number): void {
@@ -380,6 +395,7 @@ export class GameScene extends Phaser.Scene {
     this.inventory.addItem(harvestId, 1);
     this.showFloatingText(tileX, tileY, `+${harvestId.charAt(0).toUpperCase() + harvestId.slice(1)}`, 0x99e550);
     this.hotBar.refresh();
+    this.tutorialSystem.advanceIfAt('harvest');
   }
 
   // ── Panel helpers ──────────────────────────────────────────────────────────
@@ -479,6 +495,7 @@ export class GameScene extends Phaser.Scene {
       this.animalSystem.advanceDay();
       this.timeSystem.advanceDay();
       this.timeSystem.start();
+      this.tutorialSystem.advanceIfAt('sleep');
       EventBus.emit('time:new-day', { day });
     });
   }
@@ -526,6 +543,7 @@ export class GameScene extends Phaser.Scene {
       energy:           this.energySystem.serialize(),
       animals:          this.animalSystem.serialize(),
       processingQueues: this.processingSystem.serialize(),
+      tutorialStep:     this.tutorialSystem.serialize(),
       tileOverrides,
     };
   }
@@ -580,6 +598,7 @@ export class GameScene extends Phaser.Scene {
     this.transitioning = true;
     this.animalPanel?.close();
     this.craftingPanel?.close();
+    this.tutorialSystem.advanceIfAt('village');
     this.movement.stop();
     this.timeSystem.pause();
     SaveManager.save(this.buildSave());
