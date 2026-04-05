@@ -6,10 +6,12 @@ import { C } from '../utils/ColorPalette';
 
 interface UISceneData {
   timeSystem?: TimeSystem;
+  hideSleepHint?: boolean;
 }
 
 export class UIScene extends Phaser.Scene {
   private timeSystem: TimeSystem | null = null;
+  private hideSleepHint = false;
 
   private dayText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
@@ -24,6 +26,7 @@ export class UIScene extends Phaser.Scene {
 
   init(data: UISceneData): void {
     this.timeSystem = data.timeSystem ?? null;
+    this.hideSleepHint = data.hideSleepHint ?? false;
   }
 
   create(): void {
@@ -123,7 +126,7 @@ export class UIScene extends Phaser.Scene {
     if (hour >= 21) {
       this.timeText.setStyle({ color: '#ff4444' });
       this.clockBg.setFillStyle(0x440000, 0.65);
-      this.sleepHint.setAlpha(1);
+      this.sleepHint.setAlpha(this.hideSleepHint ? 0 : 1);
     } else {
       this.timeText.setStyle({ color: '#ffff88' });
       this.clockBg.setFillStyle(0x000000, 0.55);
