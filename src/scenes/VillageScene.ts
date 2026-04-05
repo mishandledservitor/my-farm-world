@@ -17,6 +17,7 @@ import { TutorialPopup } from '../ui/TutorialPopup';
 import { UnlockSystem } from '../systems/UnlockSystem';
 import { NPC_DEFS } from '../sprites/NPCSprites';
 import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK } from '../data/dialogs';
+import { PetEntity } from '../entities/PetEntity';
 
 // ── Village map constants ─────────────────────────────────────────────────────
 
@@ -54,6 +55,10 @@ export class VillageScene extends Phaser.Scene {
   // NPC tile blocking set (tile keys "x,y")
   private npcTiles: Set<string> = new Set();
 
+  // Pets
+  private pets: PetEntity[] = [];
+  private catOfferShown = false;
+
   // Entry position passed from GameScene
   private entryX = 1;
   private entryY = 7;
@@ -74,6 +79,8 @@ export class VillageScene extends Phaser.Scene {
     this.lifetimeItemsSold   = save.lifetimeItemsSold   ?? 0;
     this.shopPanel           = null;
     this.transitioning       = false;
+    this.catOfferShown       = false;
+    this.pets                = [];
     this.tutorialSystem      = new TutorialSystem(save.tutorialStep ?? 0);
 
     this.buildTileMap();
@@ -82,10 +89,16 @@ export class VillageScene extends Phaser.Scene {
     this.placeNPCs();
     this.spawnPlayer();
     this.setupSystems(save);
+    this.spawnPets(save);
     this.setupCamera();
     this.buildUI();
     this.launchUI();
     this.disableContextMenu();
+
+    // Cat offer: 50+ items sold, no cat yet
+    if (this.lifetimeItemsSold >= 50 && !save.pets.some(p => p.petType === 'cat')) {
+      this.time.delayedCall(1500, () => this.showCatOffer(save));
+    }
 
     // Tutorial popup — must be after buildUI
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'VillageScene');
@@ -220,6 +233,89 @@ export class VillageScene extends Phaser.Scene {
   private spawnPlayer(): void {
     this.player = new Player(this, this.entryX, this.entryY);
     this.player.syncPixelPosition();
+  }
+
+  private spawnPets(save: SaveFile): void {
+    for (const p of save.pets) {
+      const pet = new PetEntity(
+        this, p.id, p.petType, p.name, p.happiness,
+        this.entryX + 1, this.entryY,
+      );
+      this.pets.push(pet);
+    }
+  }
+
+  // ── Cat offer ─────────────────────────────────────────────────────────────
+
+  private showCatOffer(save: SaveFile): void {
+    if (this.catOfferShown || this.transitioning) return;
+    this.catOfferShown = true;
+    this.movement.stop();
+
+    const PW = 420, PH = 160;
+    const px = (CANVAS_WIDTH - PW) / 2;
+    const py = (CANVAS_HEIGHT - PH) / 2;
+    const cx = px + PW / 2;
+
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { objs.push(o); return o; };
+
+    add(this.add.rectangle(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.55)
+      .setScrollFactor(0).setDepth(190).setInteractive());
+    add(this.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
+      .setStrokeStyle(2, 0xd95763, 1).setScrollFactor(0).setDepth(191));
+
+    add(this.add.text(cx, py + 18, 'Mabel: "This stray keeps visiting..."', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#fbf236',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(192));
+
+    add(this.add.text(cx, py + 48, '"Would you like to adopt her?"', {
+      fontFamily: '"Courier New"', fontSize: '13px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(192));
+
+    const closePanel = () => { container.destroy(); };
+
+    const adoptBtn = add(this.add.text(cx - 60, py + PH - 30, '[ADOPT]', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#d95763',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(193)
+      .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    adoptBtn.on('pointerover',  () => adoptBtn.setColor('#ffffff'));
+    adoptBtn.on('pointerout',   () => adoptBtn.setColor('#d95763'));
+    adoptBtn.on('pointerdown',  () => { closePanel(); this.adoptCat(save); });
+
+    const leaveBtn = add(this.add.text(cx + 60, py + PH - 30, '[LEAVE]', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#9badb7',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(193)
+      .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    leaveBtn.on('pointerover',  () => leaveBtn.setColor('#ffffff'));
+    leaveBtn.on('pointerout',   () => leaveBtn.setColor('#9badb7'));
+    leaveBtn.on('pointerdown',  () => closePanel());
+
+    const container = this.add.container(0, 0, objs);
+    void container;
+  }
+
+  private adoptCat(save: SaveFile): void {
+    const newPet = { id: 'cat-1', petType: 'cat', name: 'Luna', happiness: 50 };
+    const updatedSave = { ...save, pets: [...save.pets, newPet] };
+    SaveManager.save(updatedSave);
+
+    const pet = new PetEntity(
+      this, newPet.id, newPet.petType, newPet.name, newPet.happiness,
+      this.player.tileX + 1, this.player.tileY,
+    );
+    this.pets.push(pet);
+    this.showFloatingText(
+      this.player.tileX * TILE_SIZE * SCALE + TILE_SIZE * SCALE / 2,
+      this.player.tileY * TILE_SIZE * SCALE,
+      'Luna joined! +10% sell price', 0xf7c35e,
+    );
+    // Update any open shop panel
+    if (this.shopPanel) this.shopPanel.sellMultiplier = 1.1;
   }
 
   private setupSystems(save: SaveFile): void {
@@ -357,6 +453,10 @@ export class VillageScene extends Phaser.Scene {
         this.coins = newCoins;
       },
     );
+    // Cat bonus: +10% sell price
+    if (this.pets.some(p => p.petType === 'cat')) {
+      this.shopPanel.sellMultiplier = 1.1;
+    }
     this.shopPanel.open(this.coins);
   }
 
@@ -383,6 +483,7 @@ export class VillageScene extends Phaser.Scene {
       tutorialStep:        this.tutorialSystem.serialize(),
       lifetimeCoinsEarned: this.lifetimeCoinsEarned,
       lifetimeItemsSold:   this.lifetimeItemsSold,
+      pets:                this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -415,6 +516,7 @@ export class VillageScene extends Phaser.Scene {
       tutorialStep:        this.tutorialSystem.serialize(),
       lifetimeCoinsEarned: this.lifetimeCoinsEarned,
       lifetimeItemsSold:   this.lifetimeItemsSold,
+      pets:                this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -429,6 +531,10 @@ export class VillageScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
+
+    for (const pet of this.pets) {
+      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+    }
 
     // Detect player reaching the farm gate
     if (

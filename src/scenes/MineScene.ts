@@ -11,6 +11,7 @@ import { TutorialSystem } from '../systems/TutorialSystem';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
+import { PetEntity } from '../entities/PetEntity';
 
 // ── Map constants ──────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ export class MineScene extends Phaser.Scene {
   private mineRocks  = new Set<string>();
   private rockSprites = new Map<string, Phaser.GameObjects.Image>();
   private floorObjects: Phaser.GameObjects.GameObject[] = [];
+  private pets: PetEntity[] = [];
 
   constructor() {
     super({ key: 'MineScene' });
@@ -82,12 +84,14 @@ export class MineScene extends Phaser.Scene {
     const save = SaveManager.load() ?? defaultSave();
     this.transitioning = false;
     this.floorObjects  = [];
+    this.pets          = [];
     this.tutorialSystem = new TutorialSystem(save.tutorialStep ?? 0);
 
     this.renderBaseTiles();
     this.placeFloorObjects();
     this.spawnPlayer();
     this.setupSystems(save);
+    this.spawnPets(save);
     this.setupCamera();
     this.buildUI();
     this.launchUI();
@@ -170,6 +174,16 @@ export class MineScene extends Phaser.Scene {
   private spawnPlayer(): void {
     this.player = new Player(this, this.entryX, this.entryY);
     this.player.syncPixelPosition();
+  }
+
+  private spawnPets(save: SaveFile): void {
+    for (const p of save.pets) {
+      const pet = new PetEntity(
+        this, p.id, p.petType, p.name, p.happiness,
+        this.entryX + 1, this.entryY,
+      );
+      this.pets.push(pet);
+    }
   }
 
   private setupSystems(save: SaveFile): void {
@@ -320,6 +334,7 @@ export class MineScene extends Phaser.Scene {
       playerTileY:  7,
       currentScene: 'VillageScene',
       tutorialStep: this.tutorialSystem.serialize(),
+      pets:         this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -334,5 +349,9 @@ export class MineScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
+
+    for (const pet of this.pets) {
+      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+    }
   }
 }

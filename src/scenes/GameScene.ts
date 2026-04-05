@@ -20,6 +20,7 @@ import { CraftingPanel } from '../ui/CraftingPanel';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { getCropBySeed } from '../data/crops';
 import { getItem } from '../data/items';
+import { PetEntity } from '../entities/PetEntity';
 
 // ── Tile type IDs ─────────────────────────────────────────────────────────────
 
@@ -79,6 +80,7 @@ export class GameScene extends Phaser.Scene {
   private coins = 50;
 
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private pets: PetEntity[] = [];
 
   // Non-walkable barn/station tiles
   private readonly barnTiles = new Set<string>([
@@ -100,12 +102,14 @@ export class GameScene extends Phaser.Scene {
     this.sleepingIn    = false;
     this.animalPanel   = null;
     this.craftingPanel = null;
+    this.pets          = [];
 
     this.buildTileMap();
     this.renderTiles();
     this.placeWorldObjects();
     this.spawnPlayer(save);
     this.setupSystems(save);
+    this.spawnPets(save);
     this.setupCamera();
     this.setupSleepListeners();
     this.setupCropListeners();
@@ -273,6 +277,14 @@ export class GameScene extends Phaser.Scene {
     this.player.syncPixelPosition();
   }
 
+  private spawnPets(save: SaveFile | null): void {
+    for (const p of (save?.pets ?? [])) {
+      const startX = (save?.playerTileX ?? 14) + 1;
+      const startY = save?.playerTileY ?? 11;
+      this.pets.push(new PetEntity(this, p.id, p.petType, p.name, p.happiness, startX, startY));
+    }
+  }
+
   private setupSystems(save: SaveFile | null): void {
     const day  = save?.day ?? 1;
     const mins = save?.totalMinutes ?? 6 * 60;
@@ -435,6 +447,19 @@ export class GameScene extends Phaser.Scene {
         this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
       }
       this.energySystem.fullRestore();
+
+      // Dog bonus: alert when crops are harvest-ready
+      const hasDog = this.pets.some(p => p.petType === 'dog');
+      if (hasDog) {
+        const readyCount = this.cropSystem.getAllCrops().filter(c => c.growthStage >= 3).length;
+        if (readyCount > 0) {
+          this.showFloatingText(
+            this.player.tileX, this.player.tileY,
+            `Dog: ${readyCount} crop${readyCount > 1 ? 's' : ''} ready!`,
+            0x99e550,
+          );
+        }
+      }
     });
   }
 
@@ -550,6 +575,7 @@ export class GameScene extends Phaser.Scene {
       crops:            this.cropSystem.serialize(),
       energy:           this.energySystem.serialize(),
       animals:          this.animalSystem.serialize(),
+      pets:             this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
       processingQueues: this.processingSystem.serialize(),
       tutorialStep:     this.tutorialSystem.serialize(),
       tileOverrides,
@@ -654,6 +680,10 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
+
+    for (const pet of this.pets) {
+      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+    }
 
     const idle = !this.transitioning && !this.sleepingIn &&
                  !this.animalPanel?.isVisible() && !this.craftingPanel?.isVisible();
