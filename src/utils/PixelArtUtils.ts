@@ -96,6 +96,18 @@ export function registerSpriteSheet(
 }
 
 /**
+ * Add pointer-over / pointer-out brightness tint to an interactive game object.
+ * The object must already have setInteractive() called (or useHandCursor enabled).
+ */
+export function addHoverHighlight(
+  obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite,
+): void {
+  if (!obj.input) obj.setInteractive({ useHandCursor: true });
+  obj.on('pointerover', () => obj.setTint(0xddddff));
+  obj.on('pointerout',  () => obj.clearTint());
+}
+
+/**
  * Apply palette swaps to a pixel grid.
  * Replaces all occurrences of each key color with the corresponding value color.
  */

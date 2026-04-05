@@ -1,6 +1,7 @@
 import { EventBus } from '../utils/EventBus';
 import { CROPS, getCropBySeed } from '../data/crops';
 import { CropSave } from '../save/SaveSchema';
+import { SeasonName } from '../utils/SeasonUtils';
 
 export interface CropTile {
   tileX: number;
@@ -87,20 +88,38 @@ export class CropSystem {
 
   // ── Called once per day (on 'new-day' event) ──────────────────────────────
 
-  advanceDay(): void {
-    for (const crop of this.crops.values()) {
-      if (crop.wateredToday) {
-        const def = CROPS[crop.cropType];
-        if (crop.growthStage < def.stages) {
-          crop.growthStage++;
-          if (crop.growthStage >= def.stages) {
-            // Emit "dog alert" in v0.9 — for now just log
-          }
-        }
+  /**
+   * Advance all crops by one day.
+   * @param currentSeason — the season of the NEW day; out-of-season crops wither.
+   * @returns array of tile keys ("x,y") for crops that withered (so caller can remove sprites)
+   */
+  advanceDay(currentSeason?: SeasonName): string[] {
+    const withered: string[] = [];
+    for (const [key, crop] of this.crops.entries()) {
+      const def = CROPS[crop.cropType];
+
+      // Wither check: if season just changed and this crop isn't 'any' and doesn't match
+      if (currentSeason && def.season !== 'any' && def.season !== currentSeason) {
+        withered.push(key);
+        this.crops.delete(key);
+        EventBus.emit('crop:withered', { tileX: crop.tileX, tileY: crop.tileY });
+        continue;
+      }
+
+      if (crop.wateredToday && crop.growthStage < def.stages) {
+        crop.growthStage++;
       }
       crop.wateredToday = false;
       crop.daysPlanted++;
     }
+    return withered;
+  }
+
+  /** True if a seed can be planted in the given season. */
+  static canPlantInSeason(seedItemId: string, season: SeasonName): boolean {
+    const def = getCropBySeed(seedItemId);
+    if (!def) return false;
+    return def.season === 'any' || def.season === season;
   }
 
   // ── Serialization ──────────────────────────────────────────────────────────

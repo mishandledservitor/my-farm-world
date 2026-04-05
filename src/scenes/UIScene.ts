@@ -3,6 +3,9 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants/GameConfig';
 import { TimeSystem } from '../systems/TimeSystem';
 import { EventBus } from '../utils/EventBus';
 import { C } from '../utils/ColorPalette';
+import {
+  getSeasonFromDay, getDayOfSeason, seasonLabel, seasonColor,
+} from '../utils/SeasonUtils';
 
 interface UISceneData {
   timeSystem?: TimeSystem;
@@ -15,6 +18,7 @@ export class UIScene extends Phaser.Scene {
 
   private dayText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
+  private seasonText!: Phaser.GameObjects.Text;
   private coordText!: Phaser.GameObjects.Text;
   private versionText!: Phaser.GameObjects.Text;
   private clockBg!: Phaser.GameObjects.Rectangle;
@@ -39,7 +43,7 @@ export class UIScene extends Phaser.Scene {
     const pad = 10;
 
     // ── Clock panel (top-left) ────────────────────────────────────────────────
-    this.clockBg = this.add.rectangle(pad + 70, pad + 22, 148, 48, 0x000000, 0.55);
+    this.clockBg = this.add.rectangle(pad + 82, pad + 28, 172, 60, 0x000000, 0.55);
     this.clockBg.setScrollFactor(0).setDepth(99);
 
     const baseStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -48,13 +52,18 @@ export class UIScene extends Phaser.Scene {
       strokeThickness: 3,
     };
 
-    this.dayText = this.add.text(pad + 4, pad + 4, 'Day 1', {
-      ...baseStyle, fontSize: '16px', color: '#ffffff',
+    this.dayText = this.add.text(pad + 4, pad + 4, 'Day 1 (Spring 1)', {
+      ...baseStyle, fontSize: '14px', color: '#ffffff',
     });
     this.dayText.setScrollFactor(0).setDepth(100);
 
-    this.timeText = this.add.text(pad + 4, pad + 26, '6:00 AM', {
-      ...baseStyle, fontSize: '14px', color: '#ffff88',
+    this.seasonText = this.add.text(pad + 4, pad + 24, 'Spring', {
+      ...baseStyle, fontSize: '13px', color: seasonColor('spring'),
+    });
+    this.seasonText.setScrollFactor(0).setDepth(100);
+
+    this.timeText = this.add.text(pad + 4, pad + 40, '6:00 AM', {
+      ...baseStyle, fontSize: '13px', color: '#ffff88',
     });
     this.timeText.setScrollFactor(0).setDepth(100);
 
@@ -74,7 +83,7 @@ export class UIScene extends Phaser.Scene {
     this.coordText.setScrollFactor(0).setDepth(100);
 
     // ── Version (bottom-right) ───────────────────────────────────────────────
-    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 16, 'v0.2', {
+    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 16, 'v1.0', {
       ...baseStyle, fontSize: '11px', color: '#666666',
     });
     this.versionText.setOrigin(1, 0).setScrollFactor(0).setDepth(100);
@@ -101,7 +110,10 @@ export class UIScene extends Phaser.Scene {
 
   private bindEvents(): void {
     EventBus.on('time:new-day', ({ day }) => {
-      this.dayText.setText(`Day ${day}`);
+      const season = getSeasonFromDay(day);
+      const dayOS  = getDayOfSeason(day);
+      this.dayText.setText(`Day ${day}  (${seasonLabel(season)} ${dayOS})`);
+      this.seasonText.setText(seasonLabel(season)).setStyle({ color: seasonColor(season) });
     });
 
     EventBus.on('player:moved', ({ tileX, tileY }) => {
@@ -116,11 +128,15 @@ export class UIScene extends Phaser.Scene {
   update(): void {
     if (!this.timeSystem) return;
 
-    const hour = this.timeSystem.hour;
+    const hour    = this.timeSystem.hour;
     const timeStr = this.timeSystem.getTimeString();
+    const day     = this.timeSystem.day;
+    const season  = getSeasonFromDay(day);
+    const dayOS   = getDayOfSeason(day);
 
     this.timeText.setText(timeStr);
-    this.dayText.setText(`Day ${this.timeSystem.day}`);
+    this.dayText.setText(`Day ${day}  (${seasonLabel(season)} ${dayOS})`);
+    this.seasonText.setText(seasonLabel(season)).setStyle({ color: seasonColor(season) });
 
     // Clock turns red after 9 PM (hour 21)
     if (hour >= 21) {

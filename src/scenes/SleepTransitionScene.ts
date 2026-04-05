@@ -3,6 +3,9 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants/GameConfig';
 import { SaveManager } from '../save/SaveManager';
 import { SaveFile } from '../save/SaveSchema';
 import { EventBus } from '../utils/EventBus';
+import {
+  isLastDayOfSeason, getSeasonFromDay, seasonLabel, seasonColor,
+} from '../utils/SeasonUtils';
 
 interface SleepData {
   buildSave: () => SaveFile;
@@ -55,12 +58,29 @@ export class SleepTransitionScene extends Phaser.Scene {
       color: '#aaaaaa',
     };
 
-    const dayText = this.add.text(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30, `Day ${day}`, textStyle);
+    // The night that just passed was day-1; check if it was the last day of a season
+    const prevDay     = day - 1;
+    const seasonEnded = isLastDayOfSeason(prevDay);
+    const newSeason   = getSeasonFromDay(day);
+
+    const titleStr = seasonEnded
+      ? `${seasonLabel(getSeasonFromDay(prevDay))} Complete!`
+      : `Day ${day}`;
+
+    const subStr = seasonEnded
+      ? `${seasonLabel(newSeason)} has begun!`
+      : 'A new day begins...';
+
+    const titleColor = seasonEnded ? seasonColor(newSeason) : '#ffffff';
+
+    const dayText = this.add.text(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30, titleStr, {
+      ...textStyle, color: titleColor,
+    });
     dayText.setOrigin(0.5, 0.5);
     dayText.setDepth(201);
     dayText.setAlpha(0);
 
-    const subText = this.add.text(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30, 'A new day begins...', subStyle);
+    const subText = this.add.text(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30, subStr, subStyle);
     subText.setOrigin(0.5, 0.5);
     subText.setDepth(201);
     subText.setAlpha(0);
