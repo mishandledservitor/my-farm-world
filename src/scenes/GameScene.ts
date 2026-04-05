@@ -4,9 +4,15 @@ import { Player } from '../entities/Player';
 import { MovementSystem } from '../systems/MovementSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { TimeSystem } from '../systems/TimeSystem';
+import { InventorySystem } from '../systems/InventorySystem';
+import { EnergySystem } from '../systems/EnergySystem';
+import { CropSystem } from '../systems/CropSystem';
 import { EventBus } from '../utils/EventBus';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
+import { HotBar } from '../ui/HotBar';
+import { getCropBySeed } from '../data/crops';
+import { getItem } from '../data/items';
 
 // Tile type IDs used in the map grid
 export const TILE = {
@@ -40,18 +46,26 @@ export class GameScene extends Phaser.Scene {
   private interaction!: InteractionSystem;
   private timeSystem!: TimeSystem;
 
+  // Core systems
+  private inventory!: InventorySystem;
+  private energySystem!: EnergySystem;
+  private cropSystem!: CropSystem;
+  private hotBar!: HotBar;
+
   // World objects
   private farmhouseSprite!: Phaser.GameObjects.Image;
   private bedObject!: Phaser.GameObjects.Image;
   private sleepingIn = false;
+  private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private coins = 50;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   create(): void {
-    // Load save if it exists
     const save = SaveManager.load();
+    this.coins = save?.coins ?? 50;
     this.buildTileMap();
     this.renderTiles();
     this.placeWorldObjects();
@@ -59,6 +73,7 @@ export class GameScene extends Phaser.Scene {
     this.setupSystems(save);
     this.setupCamera();
     this.setupSleepListeners();
+    this.setupCropListeners();
     this.launchUI();
     this.disableContextMenu();
   }
@@ -202,10 +217,191 @@ export class GameScene extends Phaser.Scene {
     this.movement = new MovementSystem((x, y) => this.isTileWalkable(x, y));
     this.movement.bind(this.player);
 
-    this.interaction = new InteractionSystem(this, this.movement);
+    // Inventory & energy
+    this.inventory = new InventorySystem();
+    this.inventory.deserialize(save?.inventory ?? []);
+
+    this.energySystem = new EnergySystem(save?.energy ?? 100);
+
+    // Crop system
+    this.cropSystem = new CropSystem();
+    this.cropSystem.deserialize(save?.crops ?? []);
+
+    // Restore tile overrides (tilled/watered soil)
+    for (const override of (save?.tileOverrides ?? [])) {
+      this.setTile(override.tileX, override.tileY, override.tileId as TileId);
+    }
+
+    // Rebuild any saved crops visually
+    for (const crop of this.cropSystem.getAllCrops()) {
+      this.spawnCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
+    }
+
+    // HotBar (runs in GameScene's scene, uses scrollFactor 0)
+    this.hotBar = new HotBar(this, this.inventory, this.energySystem);
+
+    // InteractionSystem with tool use awareness
+    this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
+      this.handleTileClick(tileX, tileY);
+    });
 
     // Start the clock!
     this.timeSystem.start();
+  }
+
+  // ── Tool & crop interaction ────────────────────────────────────────────────
+
+  private handleTileClick(tileX: number, tileY: number): void {
+    // Harvest takes priority over tools
+    if (this.cropSystem.isReadyToHarvest(tileX, tileY)) {
+      this.harvestCrop(tileX, tileY);
+      return;
+    }
+
+    const selectedId = this.inventory.selectedItemId;
+    if (!selectedId) return;
+
+    const item = getItem(selectedId);
+    const tileId = this.tileMap[tileY]?.[tileX];
+
+    if (item.category === 'tool') {
+      this.useTool(selectedId, tileX, tileY, tileId);
+    } else if (item.category === 'seed') {
+      this.plantSeed(selectedId, tileX, tileY, tileId);
+    }
+  }
+
+  private useTool(toolId: string, tileX: number, tileY: number, tileId: number): void {
+    if (toolId === 'hoe') {
+      if (tileId !== TILE.GRASS) return;
+      if (!this.energySystem.spend(2)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
+      this.setTile(tileX, tileY, TILE.DIRT);
+      this.showFloatingText(tileX, tileY, '+Till', 0xc8956b);
+    } else if (toolId === 'watering_can') {
+      if (tileId === TILE.DIRT) {
+        if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
+        this.setTile(tileX, tileY, TILE.WATERED_DIRT);
+        this.cropSystem.water(tileX, tileY);
+        this.showFloatingText(tileX, tileY, '💧', 0x5fcde4);
+      } else if (tileId === TILE.WATERED_DIRT || this.cropSystem.isOccupied(tileX, tileY)) {
+        if (!this.energySystem.spend(1)) { this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444); return; }
+        this.cropSystem.water(tileX, tileY);
+        this.showFloatingText(tileX, tileY, '💧', 0x5fcde4);
+      }
+    }
+    this.hotBar.refresh();
+  }
+
+  private plantSeed(seedId: string, tileX: number, tileY: number, tileId: number): void {
+    if (tileId !== TILE.DIRT && tileId !== TILE.WATERED_DIRT) return;
+    if (this.cropSystem.isOccupied(tileX, tileY)) return;
+
+    const cropDef = getCropBySeed(seedId);
+    if (!cropDef) return;
+    if (!this.energySystem.spend(cropDef.energyCost)) {
+      this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444);
+      return;
+    }
+
+    this.inventory.removeItem(seedId, 1);
+    this.cropSystem.plant(tileX, tileY, seedId);
+    this.spawnCropSprite(tileX, tileY, cropDef.id, 0);
+    this.hotBar.refresh();
+    this.showFloatingText(tileX, tileY, 'Planted!', 0x99e550);
+  }
+
+  private harvestCrop(tileX: number, tileY: number): void {
+    if (!this.cropSystem.isReadyToHarvest(tileX, tileY)) return;
+    const harvestId = this.cropSystem.harvest(tileX, tileY);
+    if (!harvestId) return;
+
+    const crop = this.cropSystem.getCrop(tileX, tileY);
+    if (!crop) {
+      // Crop removed — destroy sprite
+      this.destroyCropSprite(tileX, tileY);
+    } else {
+      // Regrows — update sprite to new stage
+      this.updateCropSprite(tileX, tileY, crop.cropType, crop.growthStage);
+    }
+
+    this.inventory.addItem(harvestId, 1);
+    const price = getItem(harvestId).basePrice;
+    this.showFloatingText(tileX, tileY, `+${harvestId.charAt(0).toUpperCase() + harvestId.slice(1)}`, 0x99e550);
+    this.hotBar.refresh();
+  }
+
+  private setupCropListeners(): void {
+    // When a new day comes, advance crops and refresh sprites
+    EventBus.on('time:new-day', () => {
+      this.cropSystem.advanceDay();
+      for (const crop of this.cropSystem.getAllCrops()) {
+        this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
+      }
+      this.energySystem.fullRestore();
+    });
+  }
+
+  // ── Crop sprite management ─────────────────────────────────────────────────
+
+  private cropSpriteKey(x: number, y: number): string {
+    return `${x},${y}`;
+  }
+
+  private spawnCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
+    const key = this.cropSpriteKey(tileX, tileY);
+    this.destroyCropSprite(tileX, tileY);
+    const tileDisplay = TILE_SIZE * SCALE;
+    const img = this.add.image(
+      tileX * tileDisplay + tileDisplay / 2,
+      tileY * tileDisplay + tileDisplay / 2,
+      `crop-${cropType}-${stage}`,
+    );
+    img.setScale(SCALE).setDepth(15);
+    this.cropSprites.set(key, img);
+  }
+
+  private updateCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
+    const img = this.cropSprites.get(this.cropSpriteKey(tileX, tileY));
+    if (img) {
+      const textureKey = `crop-${cropType}-${stage}`;
+      if (this.textures.exists(textureKey)) img.setTexture(textureKey);
+    } else {
+      this.spawnCropSprite(tileX, tileY, cropType, stage);
+    }
+  }
+
+  private destroyCropSprite(tileX: number, tileY: number): void {
+    const key = this.cropSpriteKey(tileX, tileY);
+    this.cropSprites.get(key)?.destroy();
+    this.cropSprites.delete(key);
+  }
+
+  // ── Tile mutation ──────────────────────────────────────────────────────────
+
+  setTile(tileX: number, tileY: number, tileId: TileId): void {
+    if (tileX < 0 || tileY < 0 || tileX >= MAP_COLS || tileY >= MAP_ROWS) return;
+    this.tileMap[tileY][tileX] = tileId;
+    const img = this.tileImages[tileY][tileX];
+    img.setTexture(TILE_KEYS[tileId]);
+  }
+
+  // ── Floating text helper ───────────────────────────────────────────────────
+
+  private showFloatingText(tileX: number, tileY: number, text: string, color: number): void {
+    const tileDisplay = TILE_SIZE * SCALE;
+    const hexStr = '#' + color.toString(16).padStart(6, '0');
+    const t = this.add.text(
+      tileX * tileDisplay + tileDisplay / 2,
+      tileY * tileDisplay,
+      text,
+      { fontFamily: '"Courier New"', fontSize: '13px', color: hexStr, stroke: '#000', strokeThickness: 3 },
+    );
+    t.setOrigin(0.5, 1).setDepth(50);
+    this.tweens.add({
+      targets: t, y: t.y - 32, alpha: 0,
+      duration: 900, ease: 'Quad.easeOut',
+      onComplete: () => t.destroy(),
+    });
   }
 
   private setupSleepListeners(): void {
@@ -239,13 +435,30 @@ export class GameScene extends Phaser.Scene {
 
   buildSave(day?: number): SaveFile {
     const base = SaveManager.load() ?? defaultSave();
+
+    // Collect tile overrides (tilled/watered tiles)
+    const tileOverrides: Array<{ tileX: number; tileY: number; tileId: number }> = [];
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        const id = this.tileMap[row][col];
+        if (id === TILE.DIRT || id === TILE.WATERED_DIRT) {
+          tileOverrides.push({ tileX: col, tileY: row, tileId: id });
+        }
+      }
+    }
+
     return {
       ...base,
       day: day ?? this.timeSystem.day,
       totalMinutes: this.timeSystem.minutesElapsed,
+      coins: this.coins,
       playerTileX: this.player.tileX,
       playerTileY: this.player.tileY,
       currentScene: 'GameScene',
+      inventory: this.inventory.serialize(),
+      crops: this.cropSystem.serialize(),
+      energy: this.energySystem.serialize(),
+      tileOverrides,
     };
   }
 
