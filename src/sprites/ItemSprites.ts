@@ -139,6 +139,36 @@ export const ICON_BREAD: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
+export const ICON_FLOUR: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,C.MID_GREY, C.MID_GREY, C.MID_GREY,_,_,_,_,_],
+  [_,_,_,C.MID_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.LIGHT_GREY, C.MID_GREY,_,_,_,_],
+  [_,_,C.MID_GREY, C.LIGHT_GREY, C.WHITE, C.WHITE, C.WHITE, C.LIGHT_GREY, C.MID_GREY,_,_,_],
+  [_,_,C.MID_GREY, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.MID_GREY,_,_,_],
+  [_,_,C.MID_GREY, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.MID_GREY,_,_,_],
+  [_,_,C.MID_GREY, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.MID_GREY,_,_,_],
+  [_,_,C.MID_GREY, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.WHITE, C.MID_GREY,_,_,_],
+  [_,_,_,C.MID_GREY, C.WHITE, C.WHITE, C.WHITE, C.MID_GREY,_,_,_,_],
+  [_,_,_,_,C.MID_GREY, C.MID_GREY, C.MID_GREY,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+export const ICON_COW: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,C.BROWN,_,_,_,_,_,C.BROWN,_,_,_],
+  [_,C.BROWN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.BROWN,_,_],
+  [_,C.TAN, C.TAN, C.WHITE, C.TAN, C.TAN, C.TAN, C.WHITE, C.TAN, C.TAN,_,_],
+  [_,C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN,_,_],
+  [_,_,C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN, C.TAN,_,_,_],
+  [_,_,C.TAN, C.TAN, C.BROWN, C.TAN, C.TAN, C.BROWN, C.TAN,_,_,_],
+  [_,_,_,C.TAN, C.TAN, C.TAN, C.TAN, C.TAN,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
 // Generic item icons mapped by itemId
 export const ITEM_ICONS: Record<string, number[][]> = {
   hoe:          ICON_HOE,
@@ -154,4 +184,7 @@ export const ITEM_ICONS: Record<string, number[][]> = {
   milk:         ICON_MILK,
   butter:       ICON_BUTTER,
   bread:        ICON_BREAD,
+  flour:        ICON_FLOUR,
+  cow:          ICON_COW,
+  chicken:      ICON_EGG,   // fallback: egg icon for chicken type
 };

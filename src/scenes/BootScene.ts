@@ -20,6 +20,13 @@ import { CROP_SPRITES } from '../sprites/CropSprites';
 // Items
 import { ITEM_ICONS } from '../sprites/ItemSprites';
 
+// Animals & processing stations
+import {
+  SPRITE_CHICKEN, SPRITE_COW,
+  SPRITE_BARN, SPRITE_TROUGH,
+  SPRITE_CHURN, SPRITE_MILL, SPRITE_OVEN,
+} from '../sprites/AnimalSprites';
+
 export type { PlayerAppearance };
 export { DEFAULT_APPEARANCE };
 
@@ -73,6 +80,15 @@ export class BootScene extends Phaser.Scene {
     Object.entries(ITEM_ICONS).forEach(([itemId, grid]) => {
       registerPixelTexture(this, `icon-${itemId}`, grid, 1);
     });
+
+    // ── Animals & processing stations ─────────────────────────────────────────
+    registerPixelTexture(this, 'chicken', SPRITE_CHICKEN, 1);
+    registerPixelTexture(this, 'cow',     SPRITE_COW,     1);
+    registerPixelTexture(this, 'barn',    SPRITE_BARN,    1);
+    registerPixelTexture(this, 'trough',  SPRITE_TROUGH,  1);
+    registerPixelTexture(this, 'churn',   SPRITE_CHURN,   1);
+    registerPixelTexture(this, 'mill',    SPRITE_MILL,    1);
+    registerPixelTexture(this, 'oven',    SPRITE_OVEN,    1);
 
     // ── Player character (with palette swap) ──────────────────────────────────
     refreshPlayerTextures(this, appearance);
