@@ -4,6 +4,7 @@ import { BootScene } from './scenes/BootScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { CharacterCustomScene } from './scenes/CharacterCustomScene';
 import { GameScene } from './scenes/GameScene';
+import { VillageScene } from './scenes/VillageScene';
 import { UIScene } from './scenes/UIScene';
 import { SleepTransitionScene } from './scenes/SleepTransitionScene';
 
@@ -19,7 +20,8 @@ const config: Phaser.Types.Core.GameConfig = {
     BootScene,              // generates all textures, then starts MainMenuScene
     MainMenuScene,          // title screen: New Game / Continue
     CharacterCustomScene,   // appearance picker, then starts GameScene
-    GameScene,              // main world
+    GameScene,              // main farm world
+    VillageScene,           // village with NPCs, shop, dialog
     UIScene,                // parallel HUD overlay
     SleepTransitionScene,   // fade + day card + autosave
   ],

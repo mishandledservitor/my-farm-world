@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { registerPixelTexture } from '../utils/PixelArtUtils';
-import { PlayerAppearance, DEFAULT_APPEARANCE, refreshPlayerTextures } from '../utils/PlayerTextureUtils';
+import { PlayerAppearance, DEFAULT_APPEARANCE, refreshPlayerTextures, registerNPCTextures } from '../utils/PlayerTextureUtils';
 
 // Terrain
 import {
@@ -76,5 +76,8 @@ export class BootScene extends Phaser.Scene {
 
     // ── Player character (with palette swap) ──────────────────────────────────
     refreshPlayerTextures(this, appearance);
+
+    // ── NPC sprites ───────────────────────────────────────────────────────────
+    registerNPCTextures(this);
   }
 }
