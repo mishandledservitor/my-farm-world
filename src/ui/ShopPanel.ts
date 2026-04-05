@@ -7,6 +7,8 @@ import { EventBus } from '../utils/EventBus';
 const SELLABLE_CATS = new Set(['crop', 'processed', 'resource']);
 
 type CoinsCallback = (newCoins: number, qtySold: number) => void;
+/** Optional per-item price override; defaults to item.basePrice if not provided. */
+type PriceModFn = (itemId: string, basePrice: number) => number;
 
 /**
  * Full-screen shop overlay with SELL and BUY columns.
@@ -20,7 +22,9 @@ export class ShopPanel {
   private title: string;
   private coins: number;
   private onCoinsChange: CoinsCallback;
+  private priceModFn: PriceModFn;
   sellMultiplier = 1.0;          // set to 1.1 when cat is owned
+  seasonalPrices = false;        // set to true when a price modifier is active
 
   private root: Phaser.GameObjects.Container | null = null;
   private visible = false;
@@ -32,6 +36,7 @@ export class ShopPanel {
     title: string,
     initialCoins: number,
     onCoinsChange: CoinsCallback,
+    priceModFn?: PriceModFn,
   ) {
     this.scene = scene;
     this.inventory = inventory;
@@ -39,6 +44,7 @@ export class ShopPanel {
     this.title = title;
     this.coins = initialCoins;
     this.onCoinsChange = onCoinsChange;
+    this.priceModFn = priceModFn ?? ((_id, base) => base);
   }
 
   open(coins: number): void {
@@ -95,7 +101,10 @@ export class ShopPanel {
     add(this.scene.add.rectangle(cx, py + 46, PW - 4, 2, 0x444466).setScrollFactor(0).setDepth(181));
 
     // Column headers
-    add(this.scene.add.text(px + 20, py + 54, 'SELL YOUR GOODS', {
+    const sellHeader = this.seasonalPrices
+      ? 'SELL  ✦ seasonal prices'
+      : 'SELL YOUR GOODS';
+    add(this.scene.add.text(px + 20, py + 54, sellHeader, {
       fontFamily: '"Courier New"', fontSize: '13px', color: '#99e550',
     }).setScrollFactor(0).setDepth(181));
 
@@ -117,7 +126,8 @@ export class ShopPanel {
       if (!SELLABLE_CATS.has(item.category)) continue;
 
       hasSellable = true;
-      const total = Math.floor(item.basePrice * this.sellMultiplier) * slot.quantity;
+      const unitPrice = Math.floor(this.priceModFn(slot.itemId, item.basePrice) * this.sellMultiplier);
+      const total = unitPrice * slot.quantity;
       const capturedId = slot.itemId;
 
       this.addRow(objs, px + 16, sy,
@@ -127,7 +137,8 @@ export class ShopPanel {
           const qty = this.inventory.countItem(capturedId);
           if (qty <= 0) return;
           this.inventory.removeItem(capturedId, qty);
-          this.coins += Math.floor(item.basePrice * this.sellMultiplier) * qty;
+          const up = Math.floor(this.priceModFn(capturedId, item.basePrice) * this.sellMultiplier);
+          this.coins += up * qty;
           this.onCoinsChange(this.coins, qty);
           EventBus.emit('coins:changed', { coins: this.coins });
           this.rebuild();

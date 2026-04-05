@@ -71,7 +71,7 @@ export class MainMenuScene extends Phaser.Scene {
       });
 
       this.makeButton(W / 2, 450, 'NEW GAME', 0x4a2d0a, () => {
-        this.scene.start('CharacterCustomScene');
+        this.showNewGameConfirm();
       });
     } else {
       this.makeButton(W / 2, 395, 'NEW GAME', 0x4a8f3f, () => {
@@ -85,6 +85,52 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '11px',
       color: '#595652',
     }).setOrigin(1, 1);
+  }
+
+  private showNewGameConfirm(): void {
+    const W = CANVAS_WIDTH, H = CANVAS_HEIGHT;
+    const PW = 400, PH = 140;
+    const px = (W - PW) / 2, py = (H - PH) / 2;
+    const cx = px + PW / 2;
+
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { objs.push(o); return o; };
+
+    add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6).setDepth(50).setInteractive());
+    add(this.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
+      .setStrokeStyle(2, 0xfbf236, 1).setDepth(51));
+    add(this.add.text(cx, py + 18, 'Start a new game?', {
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#fbf236',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setDepth(52));
+    add(this.add.text(cx, py + 46, 'Your current save will be lost.', {
+      fontFamily: '"Courier New"', fontSize: '13px', color: '#ff8888',
+    }).setOrigin(0.5, 0).setDepth(52));
+
+    const closePanel = () => container.destroy();
+
+    const yesBtn = add(this.add.text(cx - 60, py + PH - 22, '[YES]', {
+      fontFamily: '"Courier New"', fontSize: '15px', color: '#99e550',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(53).setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    yesBtn.on('pointerover', () => yesBtn.setColor('#ffffff'));
+    yesBtn.on('pointerout',  () => yesBtn.setColor('#99e550'));
+    yesBtn.on('pointerdown', () => {
+      SaveManager.deleteSave();
+      closePanel();
+      this.scene.start('CharacterCustomScene');
+    });
+
+    const noBtn = add(this.add.text(cx + 60, py + PH - 22, '[CANCEL]', {
+      fontFamily: '"Courier New"', fontSize: '15px', color: '#9badb7',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(53).setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    noBtn.on('pointerover', () => noBtn.setColor('#ffffff'));
+    noBtn.on('pointerout',  () => noBtn.setColor('#9badb7'));
+    noBtn.on('pointerdown', () => closePanel());
+
+    const container = this.add.container(0, 0, objs);
+    void container;
   }
 
   private makeButton(x: number, y: number, label: string, color: number, onClick: () => void): void {
