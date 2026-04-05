@@ -10,6 +10,7 @@ import { CropSystem } from '../systems/CropSystem';
 import { AnimalSystem } from '../systems/AnimalSystem';
 import { ProcessingSystem } from '../systems/ProcessingSystem';
 import { TutorialSystem } from '../systems/TutorialSystem';
+import { UnlockSystem } from '../systems/UnlockSystem';
 import { EventBus } from '../utils/EventBus';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
@@ -72,8 +73,9 @@ export class GameScene extends Phaser.Scene {
   private farmhouseSprite!: Phaser.GameObjects.Image;
   private bedObject!:       Phaser.GameObjects.Image;
 
-  private sleepingIn    = false;
-  private transitioning = false;
+  private sleepingIn         = false;
+  private transitioning      = false;
+  private forestGateDenied   = false;
   private coins = 50;
 
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
@@ -127,8 +129,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Stone path from house to south border
-    for (let row = 10; row < MAP_ROWS - 1; row++) {
+    // North–south path (col 14-15): runs from row 1 all the way to the village gate
+    for (let row = 1; row < MAP_ROWS - 1; row++) {
       this.tileMap[row][14] = TILE.STONE;
       this.tileMap[row][15] = TILE.STONE;
     }
@@ -200,6 +202,12 @@ export class GameScene extends Phaser.Scene {
     this.add.text(
       28 * td + td / 2, 8 * td + td / 2, 'VILLAGE →',
       { fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236', stroke: '#000', strokeThickness: 2 },
+    ).setOrigin(0.5, 0.5).setDepth(20);
+
+    // Forest gate sign (north end of path, cols 14-15, row 1)
+    this.add.text(
+      14 * td + td, 1 * td + td / 2, 'FOREST ↑',
+      { fontFamily: '"Courier New"', fontSize: '10px', color: '#99e550', stroke: '#000', strokeThickness: 2 },
     ).setOrigin(0.5, 0.5).setDepth(20);
 
     // Fence posts around farm plot
@@ -591,6 +599,37 @@ export class GameScene extends Phaser.Scene {
   getTimeSystem(): TimeSystem { return this.timeSystem; }
   getPlayer():     Player     { return this.player; }
 
+  // ── Forest transition ──────────────────────────────────────────────────────
+
+  private triggerForestTransition(): void {
+    if (this.transitioning) return;
+
+    const save = SaveManager.load();
+    if (!save || !UnlockSystem.isForestUnlocked(save)) {
+      if (!this.forestGateDenied) {
+        this.forestGateDenied = true;
+        this.showFloatingText(14, 0, 'Day 7 + Axe needed', 0xff8800);
+        // Push player back south one tile and reset cooldown
+        this.movement.moveTo(14, 2);
+        this.time.delayedCall(1800, () => { this.forestGateDenied = false; });
+      }
+      return;
+    }
+
+    this.transitioning = true;
+    this.animalPanel?.close();
+    this.craftingPanel?.close();
+    this.movement.stop();
+    this.timeSystem.pause();
+    SaveManager.save(this.buildSave());
+
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.stop('UIScene');
+      this.scene.start('ForestScene', { entryX: 9, entryY: 13 });
+    });
+  }
+
   // ── Village transition ─────────────────────────────────────────────────────
 
   private triggerVillageTransition(): void {
@@ -616,15 +655,17 @@ export class GameScene extends Phaser.Scene {
     this.timeSystem.update(delta);
     this.movement.update(delta);
 
-    if (
-      !this.transitioning &&
-      !this.sleepingIn &&
-      !this.animalPanel?.isVisible() &&
-      !this.craftingPanel?.isVisible() &&
-      this.player.tileX >= 28 &&
-      this.player.tileY >= 9 && this.player.tileY <= 12
-    ) {
+    const idle = !this.transitioning && !this.sleepingIn &&
+                 !this.animalPanel?.isVisible() && !this.craftingPanel?.isVisible();
+
+    // Village gate (east border, rows 9-12)
+    if (idle && this.player.tileX >= 28 && this.player.tileY >= 9 && this.player.tileY <= 12) {
       this.triggerVillageTransition();
+    }
+
+    // Forest gate (north border, cols 13-16)
+    if (idle && this.player.tileY <= 0 && this.player.tileX >= 13 && this.player.tileX <= 16) {
+      this.triggerForestTransition();
     }
   }
 }

@@ -5,6 +5,8 @@ import { MainMenuScene } from './scenes/MainMenuScene';
 import { CharacterCustomScene } from './scenes/CharacterCustomScene';
 import { GameScene } from './scenes/GameScene';
 import { VillageScene } from './scenes/VillageScene';
+import { ForestScene } from './scenes/ForestScene';
+import { MineScene } from './scenes/MineScene';
 import { UIScene } from './scenes/UIScene';
 import { SleepTransitionScene } from './scenes/SleepTransitionScene';
 
@@ -22,6 +24,8 @@ const config: Phaser.Types.Core.GameConfig = {
     CharacterCustomScene,   // appearance picker, then starts GameScene
     GameScene,              // main farm world
     VillageScene,           // village with NPCs, shop, dialog
+    ForestScene,            // whispering forest (unlocks Day 7 + axe)
+    MineScene,              // mine (unlocks 1000 lifetime coins)
     UIScene,                // parallel HUD overlay
     SleepTransitionScene,   // fade + day card + autosave
   ],

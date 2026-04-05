@@ -14,6 +14,7 @@ import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { TutorialPopup } from '../ui/TutorialPopup';
+import { UnlockSystem } from '../systems/UnlockSystem';
 import { NPC_DEFS } from '../sprites/NPCSprites';
 import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK } from '../data/dialogs';
 
@@ -44,6 +45,8 @@ export class VillageScene extends Phaser.Scene {
   private dialogBox!: DialogBox;
   private shopPanel: ShopPanel | null = null;
   private coins = 50;
+  private lifetimeCoinsEarned = 0;
+  private lifetimeItemsSold   = 0;
   private transitioning = false;
   private tutorialSystem!: TutorialSystem;
   private tutorialPopup!:  TutorialPopup;
@@ -66,10 +69,12 @@ export class VillageScene extends Phaser.Scene {
 
   create(): void {
     const save = SaveManager.load() ?? defaultSave();
-    this.coins = save.coins;
-    this.shopPanel = null;
-    this.transitioning = false;
-    this.tutorialSystem = new TutorialSystem(save.tutorialStep ?? 0);
+    this.coins               = save.coins;
+    this.lifetimeCoinsEarned = save.lifetimeCoinsEarned ?? 0;
+    this.lifetimeItemsSold   = save.lifetimeItemsSold   ?? 0;
+    this.shopPanel           = null;
+    this.transitioning       = false;
+    this.tutorialSystem      = new TutorialSystem(save.tutorialStep ?? 0);
 
     this.buildTileMap();
     this.renderTiles();
@@ -158,6 +163,14 @@ export class VillageScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5, 0.5).setDepth(20);
 
+    // Cave entrance (mine) at the east end of the road
+    this.add.image(17 * td + td / 2, 7 * td + td / 2, 'cave-entrance')
+      .setScale(SCALE).setDepth(10);
+    this.add.text(17 * td + td / 2, 6 * td - 4, 'THE MINE', {
+      fontFamily: '"Courier New"', fontSize: '10px', color: '#9badb7',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(20);
+
     // Decorative trees
     [[7, 2], [12, 2], [7, 11], [12, 11], [5, 10], [14, 10]].forEach(([col, row]) => {
       const x = col * td + td / 2;
@@ -197,6 +210,9 @@ export class VillageScene extends Phaser.Scene {
 
       this.npcTiles.add(`${npc.tileX},${npc.tileY}`);
     });
+
+    // Cave entrance blocks its tile
+    this.npcTiles.add('17,7');
   }
 
   // ── Systems ───────────────────────────────────────────────────────────────
@@ -266,6 +282,12 @@ export class VillageScene extends Phaser.Scene {
   private handleTileClick(tileX: number, tileY: number): void {
     if (this.dialogBox.isVisible() || this.shopPanel?.isVisible()) return;
 
+    // Mine entrance
+    if (tileX === 17 && tileY === 7) {
+      this.handleMineEntrance();
+      return;
+    }
+
     // NPC interaction
     const npc = NPC_DEFS.find(n => n.tileX === tileX && n.tileY === tileY);
     if (npc) {
@@ -277,6 +299,33 @@ export class VillageScene extends Phaser.Scene {
     if (tileX <= 0 && tileY >= 5 && tileY <= 9) {
       this.transitionToFarm();
     }
+  }
+
+  private handleMineEntrance(): void {
+    const save = SaveManager.load();
+    if (!save || !UnlockSystem.isMineUnlocked(save)) {
+      const remaining = 1000 - (save?.lifetimeCoinsEarned ?? 0);
+      const td = TILE_SIZE * SCALE;
+      this.showFloatingText(
+        17 * td + td / 2, 7 * td,
+        `Earn ${remaining} more coins`, 0xff8800,
+      );
+      return;
+    }
+    this.triggerMineTransition();
+  }
+
+  private showFloatingText(worldX: number, worldY: number, text: string, color: number): void {
+    const hexStr = '#' + color.toString(16).padStart(6, '0');
+    const t = this.add.text(worldX, worldY, text, {
+      fontFamily: '"Courier New"', fontSize: '12px', color: hexStr,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(50);
+    this.tweens.add({
+      targets: t, y: t.y - 24, alpha: 0,
+      duration: 1200, ease: 'Quad.easeOut',
+      onComplete: () => t.destroy(),
+    });
   }
 
   private openDialog(npcId: string): void {
@@ -300,14 +349,48 @@ export class VillageScene extends Phaser.Scene {
     this.shopPanel = new ShopPanel(
       this, this.inventory, stock, shopTitle, this.coins,
       (newCoins) => {
-        if (newCoins > this.coins) this.tutorialSystem.advanceIfAt('sell');
+        if (newCoins > this.coins) {
+          this.lifetimeCoinsEarned += newCoins - this.coins;
+          this.lifetimeItemsSold   += 1;
+          this.tutorialSystem.advanceIfAt('sell');
+        }
         this.coins = newCoins;
       },
     );
     this.shopPanel.open(this.coins);
   }
 
-  // ── Scene transition ──────────────────────────────────────────────────────
+  // ── Scene transitions ─────────────────────────────────────────────────────
+
+  private triggerMineTransition(): void {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.shopPanel?.close();
+    this.dialogBox.dismiss();
+    this.movement.stop();
+    this.timeSystem.pause();
+
+    const save = SaveManager.load() ?? defaultSave();
+    SaveManager.save({
+      ...save,
+      coins:               this.coins,
+      inventory:           this.inventory.serialize(),
+      energy:              this.energySystem.serialize(),
+      totalMinutes:        this.timeSystem.minutesElapsed,
+      playerTileX:         4,
+      playerTileY:         7,
+      currentScene:        'MineScene',
+      tutorialStep:        this.tutorialSystem.serialize(),
+      lifetimeCoinsEarned: this.lifetimeCoinsEarned,
+      lifetimeItemsSold:   this.lifetimeItemsSold,
+    });
+
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.stop('UIScene');
+      this.scene.start('MineScene', { entryX: 4, entryY: 7 });
+    });
+  }
 
   private transitionToFarm(): void {
     if (this.transitioning) return;
@@ -322,14 +405,16 @@ export class VillageScene extends Phaser.Scene {
     const save = SaveManager.load() ?? defaultSave();
     SaveManager.save({
       ...save,
-      coins:        this.coins,
-      inventory:    this.inventory.serialize(),
-      energy:       this.energySystem.serialize(),
-      totalMinutes: this.timeSystem.minutesElapsed,
-      playerTileX:  24,
-      playerTileY:  11,
-      currentScene: 'GameScene',
-      tutorialStep: this.tutorialSystem.serialize(),
+      coins:               this.coins,
+      inventory:           this.inventory.serialize(),
+      energy:              this.energySystem.serialize(),
+      totalMinutes:        this.timeSystem.minutesElapsed,
+      playerTileX:         24,
+      playerTileY:         11,
+      currentScene:        'GameScene',
+      tutorialStep:        this.tutorialSystem.serialize(),
+      lifetimeCoinsEarned: this.lifetimeCoinsEarned,
+      lifetimeItemsSold:   this.lifetimeItemsSold,
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);

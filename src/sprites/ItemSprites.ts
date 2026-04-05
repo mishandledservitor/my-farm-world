@@ -1,6 +1,17 @@
 import { C } from '../utils/ColorPalette';
+import {
+  ICON_WOOD, ICON_BERRY, ICON_STONE, ICON_IRON_ORE, ICON_GOLD_ORE,
+} from './EnvironmentSprites';
+
+export { ICON_WOOD, ICON_BERRY, ICON_STONE, ICON_IRON_ORE, ICON_GOLD_ORE };
 
 const _ = C.TRANSPARENT;
+const DG = C.DARK_GREY;
+const MG = C.MID_GREY;
+const LG = C.LIGHT_GREY;
+const B  = C.BROWN;
+const DB = C.DARK_BROWN;
+const LB = C.LIGHT_BROWN;
 
 // All item icons are 12×12 for use in inventory slots
 
@@ -169,6 +180,36 @@ export const ICON_COW: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
+export const ICON_AXE: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,DG,LG,_,_,_],
+  [_,_,_,_,_,_,DG,MG,LG,DG,_,_],
+  [_,_,_,_,_,DG,MG,LG,MG,DG,_,_],
+  [_,_,_,_,DG,MG,DG,_,_,_,_,_],
+  [_,_,_,DG,B, LB,_,_,_,_,_,_],
+  [_,_,_,DB,LB,DB,_,_,_,_,_,_],
+  [_,_,DB,LB,_,_,_,_,_,_,_,_],
+  [_,DB,LB,_,_,_,_,_,_,_,_,_],
+  [_,DB,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+export const ICON_PICKAXE: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,DG,LG,LG,LG,LG,LG,LG,LG,DG,_,_],
+  [_,DG,MG,MG,MG,MG,MG,MG,MG,DG,_,_],
+  [_,_,DG,MG,DG,MG,MG,DG,_,_,_,_],
+  [_,_,_,_,DB,B, LB,_,_,_,_,_],
+  [_,_,_,_,DB,LB,DB,_,_,_,_,_],
+  [_,_,_,_,DB,LB,DB,_,_,_,_,_],
+  [_,_,_,_,DB,LB,DB,_,_,_,_,_],
+  [_,_,_,_,DB,LB,DB,_,_,_,_,_],
+  [_,_,_,_,DB,LB,DB,_,_,_,_,_],
+  [_,_,_,_,_,DB,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
 // Generic item icons mapped by itemId
 export const ITEM_ICONS: Record<string, number[][]> = {
   hoe:          ICON_HOE,
@@ -187,4 +228,12 @@ export const ITEM_ICONS: Record<string, number[][]> = {
   flour:        ICON_FLOUR,
   cow:          ICON_COW,
   chicken:      ICON_EGG,   // fallback: egg icon for chicken type
+  axe:          ICON_AXE,
+  pickaxe:      ICON_PICKAXE,
+  scythe:       ICON_HOE,   // fallback: hoe icon shape
+  wood:         ICON_WOOD,
+  berry:        ICON_BERRY,
+  stone:        ICON_STONE,
+  iron_ore:     ICON_IRON_ORE,
+  gold_ore:     ICON_GOLD_ORE,
 };
