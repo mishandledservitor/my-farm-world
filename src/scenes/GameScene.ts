@@ -56,6 +56,7 @@ export class GameScene extends Phaser.Scene {
   private farmhouseSprite!: Phaser.GameObjects.Image;
   private bedObject!: Phaser.GameObjects.Image;
   private sleepingIn = false;
+  private transitioning = false;
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
   private coins = 50;
 
@@ -66,6 +67,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const save = SaveManager.load();
     this.coins = save?.coins ?? 50;
+    this.transitioning = false;
     this.buildTileMap();
     this.renderTiles();
     this.placeWorldObjects();
@@ -109,6 +111,13 @@ export class GameScene extends Phaser.Scene {
     for (let row = 18; row <= 20; row++) {
       for (let col = 3; col <= 6; col++) {
         this.tileMap[row][col] = TILE.WATER;
+      }
+    }
+
+    // Stone path leading to village gate (right side, rows 9-12)
+    for (let row = 9; row <= 12; row++) {
+      for (let col = 25; col <= 28; col++) {
+        this.tileMap[row][col] = TILE.STONE;
       }
     }
   }
@@ -178,6 +187,14 @@ export class GameScene extends Phaser.Scene {
       top.setScale(SCALE);
       top.setDepth(10);
     });
+
+    // Village gate sign (right edge path, row 8)
+    this.add.text(
+      28 * tileDisplay + tileDisplay / 2,
+      8 * tileDisplay + tileDisplay / 2,
+      'VILLAGE →',
+      { fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236', stroke: '#000', strokeThickness: 2 },
+    ).setOrigin(0.5, 0.5).setDepth(20);
 
     // Fence posts around the farm plot
     const fencePositions: Array<{ col: number; row: number }> = [];
@@ -496,9 +513,33 @@ export class GameScene extends Phaser.Scene {
 
   // ── Update loop ────────────────────────────────────────────────────────────
 
+  private triggerVillageTransition(): void {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.movement.stop();
+    this.timeSystem.pause();
+    SaveManager.save(this.buildSave());
+
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.stop('UIScene');
+      this.scene.start('VillageScene', { entryX: 1, entryY: 7 });
+    });
+  }
+
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
+
+    // Village gate: walk to right edge path
+    if (
+      !this.transitioning &&
+      !this.sleepingIn &&
+      this.player.tileX >= 28 &&
+      this.player.tileY >= 9 && this.player.tileY <= 12
+    ) {
+      this.triggerVillageTransition();
+    }
   }
 
   // ── Public accessors (used by UIScene via EventBus) ────────────────────────
