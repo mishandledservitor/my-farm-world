@@ -5,6 +5,8 @@ import { MovementSystem } from '../systems/MovementSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { TimeSystem } from '../systems/TimeSystem';
 import { EventBus } from '../utils/EventBus';
+import { SaveManager } from '../save/SaveManager';
+import { defaultSave, SaveFile } from '../save/SaveSchema';
 
 // Tile type IDs used in the map grid
 export const TILE = {
@@ -40,18 +42,23 @@ export class GameScene extends Phaser.Scene {
 
   // World objects
   private farmhouseSprite!: Phaser.GameObjects.Image;
+  private bedObject!: Phaser.GameObjects.Image;
+  private sleepingIn = false;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   create(): void {
+    // Load save if it exists
+    const save = SaveManager.load();
     this.buildTileMap();
     this.renderTiles();
     this.placeWorldObjects();
-    this.spawnPlayer();
-    this.setupSystems();
+    this.spawnPlayer(save);
+    this.setupSystems(save);
     this.setupCamera();
+    this.setupSleepListeners();
     this.launchUI();
     this.disableContextMenu();
   }
@@ -115,7 +122,7 @@ export class GameScene extends Phaser.Scene {
   private placeWorldObjects(): void {
     const tileDisplay = TILE_SIZE * SCALE;
 
-    // Farmhouse at tile (12, 6) — 16×16 sprite displayed at 2× tile scale
+    // Farmhouse at tile (12, 6)
     this.farmhouseSprite = this.add.image(
       12 * tileDisplay + tileDisplay / 2,
       6 * tileDisplay + tileDisplay / 2,
@@ -124,6 +131,18 @@ export class GameScene extends Phaser.Scene {
     this.farmhouseSprite.setScale(SCALE);
     this.farmhouseSprite.setDepth(10);
     this.farmhouseSprite.setOrigin(0.5, 0.5);
+
+    // Bed inside the farmhouse (tile 12, 8) — clickable to sleep
+    this.bedObject = this.add.image(
+      12 * tileDisplay + tileDisplay / 2,
+      8 * tileDisplay + tileDisplay / 2,
+      'bed',
+    );
+    this.bedObject.setScale(SCALE);
+    this.bedObject.setDepth(9);
+    this.bedObject.setOrigin(0.5, 0.5);
+    this.bedObject.setInteractive({ useHandCursor: true });
+    this.bedObject.on('pointerdown', () => this.triggerSleep());
 
     // Trees along the top-left border
     const treePositions = [
@@ -168,18 +187,66 @@ export class GameScene extends Phaser.Scene {
 
   // ── Player & systems ───────────────────────────────────────────────────────
 
-  private spawnPlayer(): void {
-    this.player = new Player(this, 14, 11);
+  private spawnPlayer(save: SaveFile | null): void {
+    const tx = save?.playerTileX ?? 14;
+    const ty = save?.playerTileY ?? 11;
+    this.player = new Player(this, tx, ty);
     this.player.syncPixelPosition();
   }
 
-  private setupSystems(): void {
-    this.timeSystem = new TimeSystem(1, 6); // Day 1, 6 AM (frozen in v0.1)
+  private setupSystems(save: SaveFile | null): void {
+    const day = save?.day ?? 1;
+    const mins = save?.totalMinutes ?? 6 * 60;
+    this.timeSystem = new TimeSystem(day, Math.floor(mins / 60));
 
     this.movement = new MovementSystem((x, y) => this.isTileWalkable(x, y));
     this.movement.bind(this.player);
 
     this.interaction = new InteractionSystem(this, this.movement);
+
+    // Start the clock!
+    this.timeSystem.start();
+  }
+
+  private setupSleepListeners(): void {
+    // Midnight → forced sleep
+    EventBus.on('time:midnight', () => {
+      if (!this.sleepingIn) this.triggerSleep();
+    });
+
+    // After sleep transition ends → resume game
+    EventBus.on('sleep:end', ({ day }) => {
+      this.sleepingIn = false;
+      this.timeSystem.advanceDay();
+      this.timeSystem.start();
+      // Broadcast so UIScene updates
+      EventBus.emit('time:new-day', { day });
+    });
+  }
+
+  triggerSleep(): void {
+    if (this.sleepingIn) return;
+    this.sleepingIn = true;
+    this.timeSystem.pause();
+    this.movement.stop();
+
+    const nextDay = this.timeSystem.day + 1;
+    this.scene.launch('SleepTransitionScene', {
+      buildSave: () => this.buildSave(nextDay),
+      nextDay,
+    });
+  }
+
+  buildSave(day?: number): SaveFile {
+    const base = SaveManager.load() ?? defaultSave();
+    return {
+      ...base,
+      day: day ?? this.timeSystem.day,
+      totalMinutes: this.timeSystem.minutesElapsed,
+      playerTileX: this.player.tileX,
+      playerTileY: this.player.tileY,
+      currentScene: 'GameScene',
+    };
   }
 
   private isTileWalkable(x: number, y: number): boolean {
