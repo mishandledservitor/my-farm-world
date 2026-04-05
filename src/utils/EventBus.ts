@@ -39,6 +39,7 @@ export type GameEventMap = {
   'crop:planted':    { tileX: number; tileY: number; cropType: string };
   'crop:watered':    { tileX: number; tileY: number };
   'crop:harvested':  { tileX: number; tileY: number; cropType: string };
+  'crop:withered':   { tileX: number; tileY: number };
 
   // Tutorial
   'tutorial:step':   { step: number };

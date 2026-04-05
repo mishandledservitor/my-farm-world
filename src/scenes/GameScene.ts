@@ -21,6 +21,8 @@ import { TutorialPopup } from '../ui/TutorialPopup';
 import { getCropBySeed } from '../data/crops';
 import { getItem } from '../data/items';
 import { PetEntity } from '../entities/PetEntity';
+import { getSeasonFromDay, seasonLabel } from '../utils/SeasonUtils';
+import { addHoverHighlight } from '../utils/PixelArtUtils';
 
 // ── Tile type IDs ─────────────────────────────────────────────────────────────
 
@@ -189,6 +191,7 @@ export class GameScene extends Phaser.Scene {
       12 * td + td / 2, 8 * td + td / 2, 'bed',
     ).setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
     this.bedObject.on('pointerdown', () => this.triggerSleep());
+    addHoverHighlight(this.bedObject);
 
     // Trees
     const treePositions = [
@@ -234,6 +237,7 @@ export class GameScene extends Phaser.Scene {
     const barnImg = this.add.image(barnX, barnY, 'barn')
       .setScale(SCALE).setDepth(11).setInteractive({ useHandCursor: true });
     barnImg.on('pointerdown', () => this.openAnimalPanel());
+    addHoverHighlight(barnImg);
 
     this.add.text(barnX, barnY - td, 'THE BARN', {
       fontFamily: '"Courier New"', fontSize: '10px', color: '#cbdbfc',
@@ -244,6 +248,7 @@ export class GameScene extends Phaser.Scene {
     const troughImg = this.add.image(5 * td + td / 2, 11 * td + td / 2, 'trough')
       .setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
     troughImg.on('pointerdown', () => this.openAnimalPanel());
+    addHoverHighlight(troughImg);
 
     // ── Processing stations ────────────────────────────────────────────────────
     const stations: Array<{ key: string; type: string; col: number; row: number; label: string }> = [
@@ -257,9 +262,10 @@ export class GameScene extends Phaser.Scene {
       const sy = s.row * td + td / 2;
       const sType = s.type;
 
-      this.add.image(sx, sy, s.key).setScale(SCALE).setDepth(9)
+      const stImg = this.add.image(sx, sy, s.key).setScale(SCALE).setDepth(9)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.openCraftingPanel(sType));
+      addHoverHighlight(stImg as Phaser.GameObjects.Image);
 
       this.add.text(sx, sy + td / 2 + 2, s.label, {
         fontFamily: '"Courier New"', fontSize: '9px', color: '#cbdbfc',
@@ -387,6 +393,17 @@ export class GameScene extends Phaser.Scene {
 
     const cropDef = getCropBySeed(seedId);
     if (!cropDef) return;
+
+    // Season check
+    const currentSeason = getSeasonFromDay(this.timeSystem.day);
+    if (!CropSystem.canPlantInSeason(seedId, currentSeason)) {
+      const label = cropDef.season !== 'any'
+        ? `${seasonLabel(cropDef.season)} only!`
+        : 'Wrong season!';
+      this.showFloatingText(tileX, tileY, label, 0xff8800);
+      return;
+    }
+
     if (!this.energySystem.spend(cropDef.energyCost)) {
       this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444);
       return;
@@ -441,8 +458,17 @@ export class GameScene extends Phaser.Scene {
   // ── Crop listener ──────────────────────────────────────────────────────────
 
   private setupCropListeners(): void {
-    EventBus.on('time:new-day', () => {
-      this.cropSystem.advanceDay();
+    EventBus.on('time:new-day', ({ day }) => {
+      const currentSeason = getSeasonFromDay(day);
+      const witheredKeys  = this.cropSystem.advanceDay(currentSeason);
+
+      // Destroy sprites for withered crops
+      for (const key of witheredKeys) {
+        const [x, y] = key.split(',').map(Number);
+        this.destroyCropSprite(x, y);
+        this.showFloatingText(x, y, 'Withered!', 0x888888);
+      }
+
       for (const crop of this.cropSystem.getAllCrops()) {
         this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
       }

@@ -66,7 +66,8 @@ export class MainMenuScene extends Phaser.Scene {
       this.makeButton(W / 2, 375, 'CONTINUE', 0x306082, () => {
         const save = SaveManager.load()!;
         refreshPlayerTextures(this, save.appearance);
-        this.scene.start('GameScene');
+        const scene = save.currentScene ?? 'GameScene';
+        this.scene.start(scene);
       });
 
       this.makeButton(W / 2, 450, 'NEW GAME', 0x4a2d0a, () => {
@@ -79,7 +80,7 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // ── Version watermark ─────────────────────────────────────────────────────
-    this.add.text(W - 10, H - 10, 'v0.4', {
+    this.add.text(W - 10, H - 10, 'v1.0', {
       fontFamily: '"Courier New"',
       fontSize: '11px',
       color: '#595652',

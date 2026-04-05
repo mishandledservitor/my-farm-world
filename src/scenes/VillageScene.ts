@@ -18,6 +18,7 @@ import { UnlockSystem } from '../systems/UnlockSystem';
 import { NPC_DEFS } from '../sprites/NPCSprites';
 import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK } from '../data/dialogs';
 import { PetEntity } from '../entities/PetEntity';
+import { addHoverHighlight } from '../utils/PixelArtUtils';
 
 // ── Village map constants ─────────────────────────────────────────────────────
 
@@ -177,8 +178,9 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5).setDepth(20);
 
     // Cave entrance (mine) at the east end of the road
-    this.add.image(17 * td + td / 2, 7 * td + td / 2, 'cave-entrance')
+    const caveImg = this.add.image(17 * td + td / 2, 7 * td + td / 2, 'cave-entrance')
       .setScale(SCALE).setDepth(10);
+    addHoverHighlight(caveImg);
     this.add.text(17 * td + td / 2, 6 * td - 4, 'THE MINE', {
       fontFamily: '"Courier New"', fontSize: '10px', color: '#9badb7',
       stroke: '#000000', strokeThickness: 2,
@@ -200,8 +202,16 @@ export class VillageScene extends Phaser.Scene {
       const wx = npc.tileX * td + td / 2;
       const wy = npc.tileY * td + td / 2;
 
-      // Sprite
-      this.add.image(wx, wy - 4, `npc-${npc.id}`).setScale(SCALE).setDepth(20);
+      // Sprite — gentle idle bob
+      const npcSprite = this.add.image(wx, wy - 4, `npc-${npc.id}`).setScale(SCALE).setDepth(20);
+      this.tweens.add({
+        targets: npcSprite,
+        y: npcSprite.y - 4,
+        duration: 1100 + Math.random() * 400,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
 
       // Name label above
       this.add.text(wx, wy - td / 2 - 2, npc.name, {
