@@ -32,6 +32,9 @@ import {
   SPRITE_BERRY_BUSH, SPRITE_CAVE_ENTRANCE, SPRITE_MINE_ROCK, SPRITE_STUMP,
 } from '../sprites/EnvironmentSprites';
 
+// Pets
+import { SPRITE_DOG, SPRITE_CAT } from '../sprites/PetSprites';
+
 export type { PlayerAppearance };
 export { DEFAULT_APPEARANCE };
 
@@ -100,6 +103,10 @@ export class BootScene extends Phaser.Scene {
     registerPixelTexture(this, 'cave-entrance',   SPRITE_CAVE_ENTRANCE,   1);
     registerPixelTexture(this, 'mine-rock',       SPRITE_MINE_ROCK,       1);
     registerPixelTexture(this, 'stump',           SPRITE_STUMP,           1);
+
+    // ── Pets ──────────────────────────────────────────────────────────────────
+    registerPixelTexture(this, 'pet-dog', SPRITE_DOG, 1);
+    registerPixelTexture(this, 'pet-cat', SPRITE_CAT, 1);
 
     // ── Player character (with palette swap) ──────────────────────────────────
     refreshPlayerTextures(this, appearance);

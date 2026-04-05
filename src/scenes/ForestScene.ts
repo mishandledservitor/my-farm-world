@@ -11,6 +11,7 @@ import { TutorialSystem } from '../systems/TutorialSystem';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
+import { PetEntity } from '../entities/PetEntity';
 
 // ── Map constants ──────────────────────────────────────────────────────────────
 
@@ -60,6 +61,10 @@ export class ForestScene extends Phaser.Scene {
   private treeSprites = new Map<string, { trunk: Phaser.GameObjects.Image; top: Phaser.GameObjects.Image }>();
   private bushSprites = new Map<string, Phaser.GameObjects.Image>();
 
+  // Pets
+  private pets: PetEntity[] = [];
+  private dogOfferShown = false;
+
   constructor() {
     super({ key: 'ForestScene' });
   }
@@ -72,6 +77,8 @@ export class ForestScene extends Phaser.Scene {
   create(): void {
     const save = SaveManager.load() ?? defaultSave();
     this.transitioning = false;
+    this.dogOfferShown = false;
+    this.pets = [];
     this.treeBlockSet.clear();
     this.choppableTrees.clear();
     this.bushSet.clear();
@@ -85,10 +92,16 @@ export class ForestScene extends Phaser.Scene {
     this.placeObjects();
     this.spawnPlayer();
     this.setupSystems(save);
+    this.spawnPets(save);
     this.setupCamera();
     this.buildUI();
     this.launchUI();
     this.disableContextMenu();
+
+    // Dog cutscene: Day 10+, no dog yet
+    if (save.day >= 10 && !save.pets.some(p => p.petType === 'dog')) {
+      this.time.delayedCall(1200, () => this.showDogOffer(save));
+    }
 
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'ForestScene');
     this.events.once('shutdown', () => this.tutorialPopup.destroy());
@@ -168,6 +181,83 @@ export class ForestScene extends Phaser.Scene {
   private spawnPlayer(): void {
     this.player = new Player(this, this.entryX, this.entryY);
     this.player.syncPixelPosition();
+  }
+
+  private spawnPets(save: SaveFile): void {
+    for (const p of save.pets) {
+      const pet = new PetEntity(
+        this, p.id, p.petType, p.name, p.happiness,
+        this.entryX + 1, this.entryY,
+      );
+      this.pets.push(pet);
+    }
+  }
+
+  // ── Dog cutscene ──────────────────────────────────────────────────────────
+
+  private showDogOffer(save: SaveFile): void {
+    if (this.dogOfferShown || this.transitioning) return;
+    this.dogOfferShown = true;
+    this.movement.stop();
+
+    const PW = 420, PH = 160;
+    const px = (CANVAS_WIDTH - PW) / 2;
+    const py = (CANVAS_HEIGHT - PH) / 2;
+    const cx = px + PW / 2;
+
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { objs.push(o); return o; };
+
+    add(this.add.rectangle(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.55)
+      .setScrollFactor(0).setDepth(190).setInteractive());
+    add(this.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
+      .setStrokeStyle(2, 0x99e550, 1).setScrollFactor(0).setDepth(191));
+
+    add(this.add.text(cx, py + 18, 'A dog is whimpering nearby!', {
+      fontFamily: '"Courier New"', fontSize: '15px', color: '#fbf236',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(192));
+
+    add(this.add.text(cx, py + 48, 'Will you take it home?', {
+      fontFamily: '"Courier New"', fontSize: '13px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(192));
+
+    const closePanel = () => { container.destroy(); };
+
+    const adoptBtn = add(this.add.text(cx - 60, py + PH - 30, '[ADOPT]', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#99e550',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(193)
+      .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    adoptBtn.on('pointerover',  () => adoptBtn.setColor('#ffffff'));
+    adoptBtn.on('pointerout',   () => adoptBtn.setColor('#99e550'));
+    adoptBtn.on('pointerdown',  () => { closePanel(); this.adoptDog(save); });
+
+    const leaveBtn = add(this.add.text(cx + 60, py + PH - 30, '[LEAVE]', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#9badb7',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(193)
+      .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+    leaveBtn.on('pointerover',  () => leaveBtn.setColor('#ffffff'));
+    leaveBtn.on('pointerout',   () => leaveBtn.setColor('#9badb7'));
+    leaveBtn.on('pointerdown',  () => closePanel());
+
+    const container = this.add.container(0, 0, objs);
+    void container;
+  }
+
+  private adoptDog(save: SaveFile): void {
+    const newPet = { id: 'dog-1', petType: 'dog', name: 'Buddy', happiness: 50 };
+    const updatedSave = { ...save, pets: [...save.pets, newPet] };
+    SaveManager.save(updatedSave);
+
+    const pet = new PetEntity(
+      this, newPet.id, newPet.petType, newPet.name, newPet.happiness,
+      this.player.tileX + 1, this.player.tileY,
+    );
+    this.pets.push(pet);
+    this.showFloatingText(this.player.tileX, this.player.tileY, 'Buddy joined!', 0xfbf236);
   }
 
   private setupSystems(save: SaveFile): void {
@@ -322,6 +412,7 @@ export class ForestScene extends Phaser.Scene {
       playerTileY:  2,
       currentScene: 'GameScene',
       tutorialStep: this.tutorialSystem.serialize(),
+      pets:         this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -336,6 +427,10 @@ export class ForestScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.timeSystem.update(delta);
     this.movement.update(delta);
+
+    for (const pet of this.pets) {
+      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+    }
 
     if (
       !this.transitioning &&

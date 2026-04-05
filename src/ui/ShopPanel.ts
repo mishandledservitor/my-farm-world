@@ -20,6 +20,7 @@ export class ShopPanel {
   private title: string;
   private coins: number;
   private onCoinsChange: CoinsCallback;
+  sellMultiplier = 1.0;          // set to 1.1 when cat is owned
 
   private root: Phaser.GameObjects.Container | null = null;
   private visible = false;
@@ -116,7 +117,7 @@ export class ShopPanel {
       if (!SELLABLE_CATS.has(item.category)) continue;
 
       hasSellable = true;
-      const total = item.basePrice * slot.quantity;
+      const total = Math.floor(item.basePrice * this.sellMultiplier) * slot.quantity;
       const capturedId = slot.itemId;
 
       this.addRow(objs, px + 16, sy,
@@ -126,7 +127,7 @@ export class ShopPanel {
           const qty = this.inventory.countItem(capturedId);
           if (qty <= 0) return;
           this.inventory.removeItem(capturedId, qty);
-          this.coins += item.basePrice * qty;
+          this.coins += Math.floor(item.basePrice * this.sellMultiplier) * qty;
           this.onCoinsChange(this.coins);
           EventBus.emit('coins:changed', { coins: this.coins });
           this.rebuild();
