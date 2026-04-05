@@ -1,15 +1,12 @@
 import Phaser from 'phaser';
-import { registerPixelTexture, registerSpriteSheet, applyPaletteSwap } from '../utils/PixelArtUtils';
-import { C, SKIN_MASK, HAIR_MASK, SHIRT_MASK } from '../utils/ColorPalette';
+import { registerPixelTexture } from '../utils/PixelArtUtils';
+import { PlayerAppearance, DEFAULT_APPEARANCE, refreshPlayerTextures } from '../utils/PlayerTextureUtils';
 
 // Terrain
 import {
   TILE_GRASS, TILE_DIRT, TILE_WATERED_DIRT,
   TILE_STONE, TILE_WATER, TILE_WOOD_FLOOR,
 } from '../sprites/TerrainSprites';
-
-// Character
-import { PLAYER_FRAMES } from '../sprites/CharacterSprites';
 
 // UI
 import {
@@ -23,17 +20,8 @@ import { CROP_SPRITES } from '../sprites/CropSprites';
 // Items
 import { ITEM_ICONS } from '../sprites/ItemSprites';
 
-export interface PlayerAppearance {
-  skin: number;
-  hair: number;
-  shirt: number;
-}
-
-export const DEFAULT_APPEARANCE: PlayerAppearance = {
-  skin:  C.SKIN_FAIR,
-  hair:  C.HAIR_BROWN,
-  shirt: C.SHIRT_BLUE,
-};
+export type { PlayerAppearance };
+export { DEFAULT_APPEARANCE };
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -42,7 +30,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.registerAllTextures(DEFAULT_APPEARANCE);
-    this.scene.start('GameScene');
+    this.scene.start('MainMenuScene');
   }
 
   registerAllTextures(appearance: PlayerAppearance): void {
@@ -87,26 +75,6 @@ export class BootScene extends Phaser.Scene {
     });
 
     // ── Player character (with palette swap) ──────────────────────────────────
-    this.registerPlayerTextures(appearance);
-  }
-
-  registerPlayerTextures(appearance: PlayerAppearance): void {
-    const swaps = new Map<number, number>([
-      [SKIN_MASK,  appearance.skin],
-      [HAIR_MASK,  appearance.hair],
-      [SHIRT_MASK, appearance.shirt],
-    ]);
-
-    // Destroy old player textures if they exist (for re-customization)
-    ['player-south', 'player-north', 'player-east', 'player-west'].forEach(key => {
-      if (this.textures.exists(key)) this.textures.remove(key);
-    });
-
-    // pixelSize=1: 16×16 raw per frame; setScale(SCALE) on the sprite handles display scaling
-    const dirs = ['south', 'north', 'east', 'west'] as const;
-    dirs.forEach(dir => {
-      const frames = PLAYER_FRAMES[dir].map(frame => applyPaletteSwap(frame, swaps));
-      registerSpriteSheet(this, `player-${dir}`, frames, 1);
-    });
+    refreshPlayerTextures(this, appearance);
   }
 }

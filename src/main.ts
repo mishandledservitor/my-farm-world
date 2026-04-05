@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './constants/GameConfig';
 import { BootScene } from './scenes/BootScene';
+import { MainMenuScene } from './scenes/MainMenuScene';
+import { CharacterCustomScene } from './scenes/CharacterCustomScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { SleepTransitionScene } from './scenes/SleepTransitionScene';
@@ -14,7 +16,9 @@ const config: Phaser.Types.Core.GameConfig = {
   antialias: false,
   roundPixels: true,
   scene: [
-    BootScene,              // generates all textures, then starts GameScene
+    BootScene,              // generates all textures, then starts MainMenuScene
+    MainMenuScene,          // title screen: New Game / Continue
+    CharacterCustomScene,   // appearance picker, then starts GameScene
     GameScene,              // main world
     UIScene,                // parallel HUD overlay
     SleepTransitionScene,   // fade + day card + autosave
