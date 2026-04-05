@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants/GameConfig';
 import { TimeSystem } from '../systems/TimeSystem';
 import { EventBus } from '../utils/EventBus';
+import { C } from '../utils/ColorPalette';
 
 interface UISceneData {
   timeSystem?: TimeSystem;
@@ -10,11 +11,12 @@ interface UISceneData {
 export class UIScene extends Phaser.Scene {
   private timeSystem: TimeSystem | null = null;
 
-  // Text objects
   private dayText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private coordText!: Phaser.GameObjects.Text;
   private versionText!: Phaser.GameObjects.Text;
+  private clockBg!: Phaser.GameObjects.Rectangle;
+  private coinText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -25,59 +27,73 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Ensure this scene's camera is always fixed (no scrolling)
     this.cameras.main.setScroll(0, 0);
-
     this.createHUD();
     this.bindEvents();
   }
 
   private createHUD(): void {
-    const pad = 12;
-    const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+    const pad = 10;
+
+    // ── Clock panel (top-left) ────────────────────────────────────────────────
+    this.clockBg = this.add.rectangle(pad + 70, pad + 22, 148, 48, 0x000000, 0.55);
+    this.clockBg.setScrollFactor(0).setDepth(99);
+
+    const baseStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: '"Courier New", Courier, monospace',
-      fontSize: '14px',
-      color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,
     };
 
-    // Day counter (top-left)
-    this.dayText = this.add.text(pad, pad, 'Day 1', {
-      ...textStyle,
-      fontSize: '16px',
+    this.dayText = this.add.text(pad + 4, pad + 4, 'Day 1', {
+      ...baseStyle, fontSize: '16px', color: '#ffffff',
     });
-    this.dayText.setDepth(100);
-    this.dayText.setScrollFactor(0);
+    this.dayText.setScrollFactor(0).setDepth(100);
 
-    // Clock (top-left, below day)
-    this.timeText = this.add.text(pad, pad + 24, '6:00 AM', textStyle);
-    this.timeText.setDepth(100);
-    this.timeText.setScrollFactor(0);
+    this.timeText = this.add.text(pad + 4, pad + 26, '6:00 AM', {
+      ...baseStyle, fontSize: '14px', color: '#ffff88',
+    });
+    this.timeText.setScrollFactor(0).setDepth(100);
 
-    // Coordinate debug display (bottom-left)
+    // ── Coin display (top-right) ──────────────────────────────────────────────
+    const coinBg = this.add.rectangle(CANVAS_WIDTH - 70, pad + 16, 130, 32, 0x000000, 0.55);
+    coinBg.setScrollFactor(0).setDepth(99);
+
+    this.coinText = this.add.text(CANVAS_WIDTH - 128, pad + 8, '$ 50', {
+      ...baseStyle, fontSize: '16px', color: '#f7c35e',
+    });
+    this.coinText.setScrollFactor(0).setDepth(100);
+
+    // ── Tile coords (bottom-left, debug) ──────────────────────────────────────
     this.coordText = this.add.text(pad, CANVAS_HEIGHT - pad - 16, 'Tile: (0, 0)', {
-      ...textStyle,
-      fontSize: '12px',
-      color: '#aaffaa',
+      ...baseStyle, fontSize: '12px', color: '#88ff88',
     });
-    this.coordText.setDepth(100);
-    this.coordText.setScrollFactor(0);
+    this.coordText.setScrollFactor(0).setDepth(100);
 
-    // Version (bottom-right)
-    this.versionText = this.add.text(
-      CANVAS_WIDTH - pad,
-      CANVAS_HEIGHT - pad - 16,
-      'v0.1',
+    // ── Version (bottom-right) ───────────────────────────────────────────────
+    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 16, 'v0.2', {
+      ...baseStyle, fontSize: '11px', color: '#666666',
+    });
+    this.versionText.setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+
+    // ── Sleep hint (shows after 9 PM) ─────────────────────────────────────────
+    this.createSleepHint();
+  }
+
+  private sleepHint!: Phaser.GameObjects.Text;
+
+  private createSleepHint(): void {
+    this.sleepHint = this.add.text(
+      CANVAS_WIDTH / 2, CANVAS_HEIGHT - 36,
+      '💤 Click the bed to sleep',
       {
-        ...textStyle,
-        fontSize: '11px',
-        color: '#888888',
+        fontFamily: '"Courier New", Courier, monospace',
+        fontSize: '13px', color: '#aaddff',
+        stroke: '#000000', strokeThickness: 3,
       },
     );
-    this.versionText.setOrigin(1, 0);
-    this.versionText.setDepth(100);
-    this.versionText.setScrollFactor(0);
+    this.sleepHint.setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
+    this.sleepHint.setAlpha(0);
   }
 
   private bindEvents(): void {
@@ -88,14 +104,38 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('player:moved', ({ tileX, tileY }) => {
       this.coordText.setText(`Tile: (${tileX}, ${tileY})`);
     });
+
+    EventBus.on('coins:changed', ({ coins }) => {
+      this.coinText.setText(`$ ${coins}`);
+    });
   }
 
   update(): void {
-    if (this.timeSystem) {
-      this.timeText.setText(this.timeSystem.getTimeString());
+    if (!this.timeSystem) return;
 
-      // Update day display
-      this.dayText.setText(`Day ${this.timeSystem.day}`);
+    const hour = this.timeSystem.hour;
+    const timeStr = this.timeSystem.getTimeString();
+
+    this.timeText.setText(timeStr);
+    this.dayText.setText(`Day ${this.timeSystem.day}`);
+
+    // Clock turns red after 9 PM (hour 21)
+    if (hour >= 21) {
+      this.timeText.setStyle({ color: '#ff4444' });
+      this.clockBg.setFillStyle(0x440000, 0.65);
+      this.sleepHint.setAlpha(1);
+    } else {
+      this.timeText.setStyle({ color: '#ffff88' });
+      this.clockBg.setFillStyle(0x000000, 0.55);
+      this.sleepHint.setAlpha(0);
+    }
+
+    // Midnight warning — blink faster
+    if (hour === 23) {
+      const blink = Math.sin(Date.now() / 150) > 0;
+      this.timeText.setAlpha(blink ? 1 : 0.3);
+    } else {
+      this.timeText.setAlpha(1);
     }
   }
 }

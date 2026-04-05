@@ -3,6 +3,7 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from './constants/GameConfig';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { SleepTransitionScene } from './scenes/SleepTransitionScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -13,9 +14,10 @@ const config: Phaser.Types.Core.GameConfig = {
   antialias: false,
   roundPixels: true,
   scene: [
-    BootScene,   // generates all textures, then starts GameScene
-    GameScene,   // main world
-    UIScene,     // parallel HUD overlay
+    BootScene,              // generates all textures, then starts GameScene
+    GameScene,              // main world
+    UIScene,                // parallel HUD overlay
+    SleepTransitionScene,   // fade + day card + autosave
   ],
   scale: {
     mode: Phaser.Scale.FIT,

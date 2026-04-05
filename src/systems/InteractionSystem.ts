@@ -2,13 +2,21 @@ import Phaser from 'phaser';
 import { TILE_SIZE, SCALE } from '../constants/GameConfig';
 import { MovementSystem } from './MovementSystem';
 
+export type TileClickCallback = (tileX: number, tileY: number) => void;
+
 export class InteractionSystem {
   private scene: Phaser.Scene;
   private movement: MovementSystem;
+  private onTileClick: TileClickCallback | null;
 
-  constructor(scene: Phaser.Scene, movement: MovementSystem) {
+  constructor(
+    scene: Phaser.Scene,
+    movement: MovementSystem,
+    onTileClick: TileClickCallback | null = null,
+  ) {
     this.scene = scene;
     this.movement = movement;
+    this.onTileClick = onTileClick;
     this.bindInput();
   }
 
@@ -16,7 +24,6 @@ export class InteractionSystem {
     this.scene.input.on(
       'pointerdown',
       (pointer: Phaser.Input.Pointer) => {
-        // Only respond to left-click (button 0)
         if (pointer.button !== 0) return;
 
         const worldX = pointer.worldX;
@@ -33,25 +40,27 @@ export class InteractionSystem {
 
   handleClick(tileX: number, tileY: number, worldX: number, worldY: number): void {
     this.showClickIndicator(worldX, worldY);
-    this.movement.moveTo(tileX, tileY);
+
+    if (this.onTileClick) {
+      // Walk to adjacent tile, then execute the tile action on arrival
+      this.movement.moveTo(tileX, tileY, () => {
+        this.onTileClick!(tileX, tileY);
+      });
+    } else {
+      this.movement.moveTo(tileX, tileY);
+    }
   }
 
   private showClickIndicator(worldX: number, worldY: number): void {
     if (!this.scene.textures.exists('click-ring')) return;
 
-    // 8×8 raw texture × scale 6 = 48×48 = 1 tile at game scale
     const ring = this.scene.add.image(worldX, worldY, 'click-ring');
-    ring.setDepth(30);
-    ring.setAlpha(1);
-    ring.setScale(6);
+    ring.setDepth(30).setAlpha(1).setScale(6);
 
     this.scene.tweens.add({
       targets: ring,
-      alpha: 0,
-      scaleX: 10,
-      scaleY: 10,
-      duration: 350,
-      ease: 'Quad.easeOut',
+      alpha: 0, scaleX: 10, scaleY: 10,
+      duration: 350, ease: 'Quad.easeOut',
       onComplete: () => ring.destroy(),
     });
   }
