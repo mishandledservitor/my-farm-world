@@ -12,6 +12,8 @@ import { ShopPanel } from '../ui/ShopPanel';
 import { EventBus } from '../utils/EventBus';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
+import { TutorialSystem } from '../systems/TutorialSystem';
+import { TutorialPopup } from '../ui/TutorialPopup';
 import { NPC_DEFS } from '../sprites/NPCSprites';
 import { NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK } from '../data/dialogs';
 
@@ -43,6 +45,8 @@ export class VillageScene extends Phaser.Scene {
   private shopPanel: ShopPanel | null = null;
   private coins = 50;
   private transitioning = false;
+  private tutorialSystem!: TutorialSystem;
+  private tutorialPopup!:  TutorialPopup;
 
   // NPC tile blocking set (tile keys "x,y")
   private npcTiles: Set<string> = new Set();
@@ -65,6 +69,7 @@ export class VillageScene extends Phaser.Scene {
     this.coins = save.coins;
     this.shopPanel = null;
     this.transitioning = false;
+    this.tutorialSystem = new TutorialSystem(save.tutorialStep ?? 0);
 
     this.buildTileMap();
     this.renderTiles();
@@ -76,6 +81,10 @@ export class VillageScene extends Phaser.Scene {
     this.buildUI();
     this.launchUI();
     this.disableContextMenu();
+
+    // Tutorial popup — must be after buildUI
+    this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'VillageScene');
+    this.events.once('shutdown', () => this.tutorialPopup.destroy());
 
     // Sync coin display
     EventBus.emit('coins:changed', { coins: this.coins });
@@ -290,7 +299,10 @@ export class VillageScene extends Phaser.Scene {
 
     this.shopPanel = new ShopPanel(
       this, this.inventory, stock, shopTitle, this.coins,
-      (newCoins) => { this.coins = newCoins; },
+      (newCoins) => {
+        if (newCoins > this.coins) this.tutorialSystem.advanceIfAt('sell');
+        this.coins = newCoins;
+      },
     );
     this.shopPanel.open(this.coins);
   }
@@ -310,13 +322,14 @@ export class VillageScene extends Phaser.Scene {
     const save = SaveManager.load() ?? defaultSave();
     SaveManager.save({
       ...save,
-      coins:         this.coins,
-      inventory:     this.inventory.serialize(),
-      energy:        this.energySystem.serialize(),
-      totalMinutes:  this.timeSystem.minutesElapsed,
-      playerTileX:   24,  // inside the farm, near the village gate
-      playerTileY:   11,
-      currentScene:  'GameScene',
+      coins:        this.coins,
+      inventory:    this.inventory.serialize(),
+      energy:       this.energySystem.serialize(),
+      totalMinutes: this.timeSystem.minutesElapsed,
+      playerTileX:  24,
+      playerTileY:  11,
+      currentScene: 'GameScene',
+      tutorialStep: this.tutorialSystem.serialize(),
     });
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
