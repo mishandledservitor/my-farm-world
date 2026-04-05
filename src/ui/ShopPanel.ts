@@ -6,7 +6,7 @@ import { EventBus } from '../utils/EventBus';
 
 const SELLABLE_CATS = new Set(['crop', 'processed', 'resource']);
 
-type CoinsCallback = (newCoins: number) => void;
+type CoinsCallback = (newCoins: number, qtySold: number) => void;
 
 /**
  * Full-screen shop overlay with SELL and BUY columns.
@@ -128,7 +128,7 @@ export class ShopPanel {
           if (qty <= 0) return;
           this.inventory.removeItem(capturedId, qty);
           this.coins += Math.floor(item.basePrice * this.sellMultiplier) * qty;
-          this.onCoinsChange(this.coins);
+          this.onCoinsChange(this.coins, qty);
           EventBus.emit('coins:changed', { coins: this.coins });
           this.rebuild();
         },
@@ -158,7 +158,7 @@ export class ShopPanel {
           if (this.coins < item.buyPrice) return;
           this.coins -= item.buyPrice;
           this.inventory.addItem(itemId, 1);
-          this.onCoinsChange(this.coins);
+          this.onCoinsChange(this.coins, 0);  // buy transaction: no items sold
           EventBus.emit('coins:changed', { coins: this.coins });
           this.rebuild();
         } : null,
