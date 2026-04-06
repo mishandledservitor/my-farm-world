@@ -5,6 +5,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.3.1] — 2026-04-06
+
+### Fixed
+- **Click-through on UI panels** (`src/systems/InteractionSystem.ts`, all world scenes): Clicking buttons
+  inside ShopPanel, AnimalPanel, or CraftingPanel also moved the player to the tile underneath the UI
+  element. The scene-level `pointerdown` listener in `InteractionSystem` had no awareness of open panels,
+  so every left-click triggered player movement regardless of whether a menu was on screen.
+
+  **Fix:** Added an `isBlocked` callback property to `InteractionSystem`. Each world scene sets it to
+  check whether any panel, dialog, or transition is currently active. When the callback returns `true`,
+  the `pointerdown` handler returns early — no click indicator, no movement, no interaction.
+
+  Scenes and their block conditions:
+  - **GameScene**: `sleepingIn || transitioning || animalPanel.isVisible() || craftingPanel.isVisible()`
+  - **VillageScene**: `transitioning || dialogBox.isVisible() || shopPanel.isVisible()`
+  - **ForestScene**: `transitioning`
+  - **MineScene**: `transitioning`
+
+- **Panel z-ordering — menus rendered behind world objects** (`src/ui/ShopPanel.ts`,
+  `src/ui/AnimalPanel.ts`, `src/ui/CraftingPanel.ts`, `src/scenes/VillageScene.ts`,
+  `src/scenes/ForestScene.ts`): Shop, animal, crafting panels, and pet-adoption modals rendered behind
+  buildings, NPCs, and trees. In Phaser 3, adding game objects to a `Container` removes them from the
+  scene's display list — the container's own depth then controls render order for all children, overriding
+  their individual depth values. All panel containers were created with `this.scene.add.container(0, 0, objs)`
+  but never assigned a depth, defaulting to 0. World objects at depth 10–50 drew on top.
+
+  **Fix:** Set `.setDepth(200)` on every panel container immediately after creation:
+  - `ShopPanel.rebuild()` container
+  - `AnimalPanel.rebuild()` container
+  - `CraftingPanel.rebuild()` container
+  - VillageScene cat-offer modal container
+  - ForestScene dog-offer modal container
+
+---
+
 ## [v1.3] — 2026-04-06
 
 ### Fixed

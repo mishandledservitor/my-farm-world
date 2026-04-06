@@ -123,6 +123,15 @@ See [DESIGN.md](DESIGN.md) for full architecture documentation and [CHANGELOG.md
 
 ---
 
+## Deployment
+
+The game is a fully static site — no server required.
+
+- **Netlify**: Push to GitHub and connect via Netlify. The included `netlify.toml` handles build settings automatically. See [DEPLOY.md](DEPLOY.md) for step-by-step instructions.
+- **Any static host**: Run `npm run build` and serve the `dist/` folder.
+
+---
+
 ## Version
 
-Current release: **v1.2** — see [CHANGELOG.md](CHANGELOG.md) for full history.
+Current release: **v1.3.1** — see [CHANGELOG.md](CHANGELOG.md) for full history.
