@@ -105,7 +105,7 @@ export class VillageScene extends Phaser.Scene {
 
     // Tutorial popup — must be after buildUI
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'VillageScene');
-    this.events.once('shutdown', () => this.tutorialPopup.destroy());
+    this.events.once('shutdown', () => { this.tutorialPopup.destroy(); this.hotBar.destroy(); });
 
     // Sync coin display
     EventBus.emit('coins:changed', { coins: this.coins });
@@ -358,6 +358,7 @@ export class VillageScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, VCOLS * td, VROWS * td);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(CANVAS_WIDTH * 0.3, CANVAS_HEIGHT * 0.3);
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   private launchUI(): void {
@@ -515,8 +516,7 @@ export class VillageScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.stop('UIScene');
-      this.scene.start('MineScene', { entryX: 4, entryY: 7 });
+      this.time.delayedCall(0, () => this.scene.start('MineScene', { entryX: 4, entryY: 7 }));
     });
   }
 
@@ -548,8 +548,7 @@ export class VillageScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.stop('UIScene');
-      this.scene.start('GameScene');
+      this.time.delayedCall(0, () => this.scene.start('GameScene'));
     });
   }
 

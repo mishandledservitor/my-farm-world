@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
 
     // Tutorial — created after all systems exist
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'GameScene');
-    this.events.once('shutdown', () => this.tutorialPopup.destroy());
+    this.events.once('shutdown', () => { this.tutorialPopup.destroy(); this.hotBar.destroy(); });
   }
 
   // ── Map setup ──────────────────────────────────────────────────────────────
@@ -627,6 +627,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, MAP_COLS * td, MAP_ROWS * td);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(CANVAS_WIDTH * 0.25, CANVAS_HEIGHT * 0.25);
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   private launchUI(): void {
@@ -677,8 +678,7 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.stop('UIScene');
-      this.scene.start('ForestScene', { entryX: 9, entryY: 13 });
+      this.time.delayedCall(0, () => this.scene.start('ForestScene', { entryX: 9, entryY: 13 }));
     });
   }
 
@@ -696,8 +696,7 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.stop('UIScene');
-      this.scene.start('VillageScene', { entryX: 1, entryY: 7 });
+      this.time.delayedCall(0, () => this.scene.start('VillageScene', { entryX: 1, entryY: 7 }));
     });
   }
 

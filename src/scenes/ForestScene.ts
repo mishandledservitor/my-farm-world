@@ -104,7 +104,7 @@ export class ForestScene extends Phaser.Scene {
     }
 
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'ForestScene');
-    this.events.once('shutdown', () => this.tutorialPopup.destroy());
+    this.events.once('shutdown', () => { this.tutorialPopup.destroy(); this.hotBar.destroy(); });
   }
 
   // ── Map ───────────────────────────────────────────────────────────────────
@@ -287,6 +287,7 @@ export class ForestScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, FCOLS * td, FROWS * td);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(CANVAS_WIDTH * 0.3, CANVAS_HEIGHT * 0.3);
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   private launchUI(): void {
@@ -417,8 +418,7 @@ export class ForestScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.stop('UIScene');
-      this.scene.start('GameScene');
+      this.time.delayedCall(0, () => this.scene.start('GameScene'));
     });
   }
 

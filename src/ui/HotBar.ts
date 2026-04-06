@@ -108,8 +108,10 @@ export class HotBar {
     this.energyFill.setScrollFactor(0).setDepth(100).setOrigin(0, 0.5);
   }
 
+  private readonly onInventoryChanged = () => this.refresh();
+
   private bindEvents(): void {
-    EventBus.on('inventory:changed', () => this.refresh());
+    EventBus.on('inventory:changed', this.onInventoryChanged);
   }
 
   refresh(): void {
@@ -158,6 +160,6 @@ export class HotBar {
   }
 
   destroy(): void {
-    EventBus.off('inventory:changed', () => this.refresh());
+    EventBus.off('inventory:changed', this.onInventoryChanged);
   }
 }
