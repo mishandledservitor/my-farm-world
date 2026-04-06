@@ -308,6 +308,7 @@ export class VillageScene extends Phaser.Scene {
     leaveBtn.on('pointerdown',  () => closePanel());
 
     const container = this.add.container(0, 0, objs);
+    container.setDepth(200);
     void container;
   }
 
@@ -344,6 +345,8 @@ export class VillageScene extends Phaser.Scene {
     this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
       this.handleTileClick(tileX, tileY);
     });
+    this.interaction.isBlocked = () =>
+      this.transitioning || this.dialogBox.isVisible() || !!(this.shopPanel?.isVisible());
 
     this.timeSystem.start();
   }

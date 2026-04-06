@@ -9,6 +9,9 @@ export class InteractionSystem {
   private movement: MovementSystem;
   private onTileClick: TileClickCallback | null;
 
+  /** When set and returns true, all pointer-down events are ignored. */
+  isBlocked: (() => boolean) | null = null;
+
   constructor(
     scene: Phaser.Scene,
     movement: MovementSystem,
@@ -25,6 +28,7 @@ export class InteractionSystem {
       'pointerdown',
       (pointer: Phaser.Input.Pointer) => {
         if (pointer.button !== 0) return;
+        if (this.isBlocked?.()) return;
 
         const worldX = pointer.worldX;
         const worldY = pointer.worldY;

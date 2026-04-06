@@ -200,5 +200,6 @@ export class CraftingPanel {
     closeBtn.on('pointerdown', () => this.close());
 
     this.root = this.scene.add.container(0, 0, objs);
+    this.root.setDepth(200);
   }
 }

@@ -187,6 +187,7 @@ export class ShopPanel {
     closeBtn.on('pointerdown', () => this.close());
 
     this.root = this.scene.add.container(0, 0, objs);
+    this.root.setDepth(200);
   }
 
   private addRow(

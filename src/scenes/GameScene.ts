@@ -335,6 +335,9 @@ export class GameScene extends Phaser.Scene {
     this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
       this.handleTileClick(tileX, tileY);
     });
+    this.interaction.isBlocked = () =>
+      this.sleepingIn || this.transitioning ||
+      !!(this.animalPanel?.isVisible()) || !!(this.craftingPanel?.isVisible());
 
     this.timeSystem.start();
   }

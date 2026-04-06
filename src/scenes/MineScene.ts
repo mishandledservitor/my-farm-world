@@ -200,6 +200,7 @@ export class MineScene extends Phaser.Scene {
     this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
       this.handleTileClick(tileX, tileY);
     });
+    this.interaction.isBlocked = () => this.transitioning;
 
     this.timeSystem.start();
   }
