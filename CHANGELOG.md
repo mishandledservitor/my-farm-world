@@ -5,6 +5,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.3] — 2026-04-06
+
+### Fixed
+- **Black screen on village/scene transitions** (`src/ui/HotBar.ts`, all world scenes): After transitioning
+  from one world scene to another, the destination scene rendered completely black. Root cause: `HotBar`
+  registered its `inventory:changed` EventBus listener using an anonymous arrow function in `bindEvents()`,
+  then tried to remove a *different* arrow function instance in `destroy()` — so the listener was never
+  actually removed. The stale listener from the previous scene's HotBar continued to fire during the new
+  scene's `create()`, calling `setTexture()` on already-destroyed `Phaser.GameObjects.Image` objects.
+  Phaser silently swallowed the resulting `TypeError` inside `create()`, leaving the scene partially
+  initialised (no camera set up, UIScene not launched) and rendering black.
+
+  **Fix:**
+  - `HotBar`: store listener as a named class field (`private readonly onInventoryChanged`) so the same
+    reference is used for both `EventBus.on` and `EventBus.off`, guaranteeing the listener is removed.
+  - All four world scenes (GameScene, VillageScene, ForestScene, MineScene): added `this.hotBar.destroy()`
+    to the `shutdown` event handler so the listener is cleaned up whenever a scene is stopped.
+  - All four world scenes: added `cameras.main.fadeIn(300)` to `setupCamera()` so each scene fades in
+    smoothly on arrival.
+  - All four world scenes: removed `scene.stop('UIScene')` calls from transition fade callbacks — stopping
+    UIScene is unnecessary and caused it to fail to relaunch in Phaser 3.90.
+  - All four world scenes: wrapped `scene.start()` calls inside `time.delayedCall(0, …)` to defer the
+    scene switch out of the camera-event callback, preventing a Phaser timing edge-case.
+
+---
+
 ## [v1.2] — 2026-04-06
 
 ### Added
