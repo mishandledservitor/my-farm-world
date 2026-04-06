@@ -134,4 +134,4 @@ The game is a fully static site — no server required.
 
 ## Version
 
-Current release: **v1.3.1** — see [CHANGELOG.md](CHANGELOG.md) for full history.
+Current release: **v1.3.2** — see [CHANGELOG.md](CHANGELOG.md) for full history.

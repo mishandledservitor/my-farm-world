@@ -60,7 +60,8 @@ src/
     TimeSystem.ts            Delta-based clock; emits time:tick, time:midnight, time:new-day
     MovementSystem.ts        A* pathfinding; smooth tile-to-tile lerp; animation control
     InteractionSystem.ts     Left-click handler; click-ring indicator; A* callback dispatch;
-                              `isBlocked` callback prevents input when panels are open
+                              `isBlocked` callback prevents input when panels are open;
+                              `scrollFactorX === 0` check blocks clicks on fixed UI elements
     CropSystem.ts            Plant/water/grow/harvest; season check; serialize/deserialize
     AnimalSystem.ts          Hunger, produce, advanceDay; serialize/deserialize
     ProcessingSystem.ts      Station jobs (churn/mill/oven); progress tracking
@@ -86,7 +87,8 @@ src/
     AnimalPanel.ts           Animal list with hunger bars; feed/collect;
                               container depth 200
     DialogBox.ts             Click-to-advance NPC dialog
-    TutorialPopup.ts         Arrow + text overlay; [SKIP] button
+    TutorialPopup.ts         Arrow + text overlay; [SKIP] button; container depth 150;
+                              interactive background blocks world clicks
   save/
     SaveSchema.ts            Full SaveFile interface; defaultSave(); PetSave, CropSave, etc.
     SaveManager.ts           localStorage save/load/delete; forward-migration stub
@@ -287,7 +289,7 @@ Seeds and tools are buy-only (no sell value). Cow costs 500g from Mabel.
 ## Git Branching Convention
 
 ```
-main              tagged stable releases (v0.1 … v1.3.1)
+main              tagged stable releases (v0.1 … v1.3.2)
 feature/vX.Y-name one branch per version, merged back via --no-ff merge commit
 ```
 

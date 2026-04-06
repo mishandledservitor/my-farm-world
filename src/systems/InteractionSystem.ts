@@ -26,9 +26,14 @@ export class InteractionSystem {
   private bindInput(): void {
     this.scene.input.on(
       'pointerdown',
-      (pointer: Phaser.Input.Pointer) => {
+      (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
         if (pointer.button !== 0) return;
         if (this.isBlocked?.()) return;
+
+        // Skip if the click landed on a fixed-position UI element (scrollFactor 0).
+        // This prevents HotBar slot clicks, dialog blockers, tutorial buttons, and
+        // panel overlays from also moving the player to the tile underneath.
+        if (currentlyOver.some(obj => 'scrollFactorX' in obj && (obj as any).scrollFactorX === 0)) return;
 
         const worldX = pointer.worldX;
         const worldY = pointer.worldY;

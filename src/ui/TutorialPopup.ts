@@ -51,9 +51,9 @@ export class TutorialPopup {
     const objs: Phaser.GameObjects.GameObject[] = [];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { objs.push(o); return o; };
 
-    // Background panel
+    // Background panel — interactive so clicks don't pass through to the world
     add(this.scene.add.rectangle(PX + PW / 2, PY + PH / 2, PW, PH, 0x080814, 0.92)
-      .setStrokeStyle(1, 0x5b6ee1, 1).setScrollFactor(0).setDepth(DEPTH));
+      .setStrokeStyle(1, 0x5b6ee1, 1).setScrollFactor(0).setDepth(DEPTH).setInteractive());
 
     // Step indicator
     const si    = this.tutorial.getStepIndex() + 1;  // display 1-based
@@ -96,5 +96,6 @@ export class TutorialPopup {
     }
 
     this.root = this.scene.add.container(0, 0, objs);
+    this.root.setDepth(150);
   }
 }

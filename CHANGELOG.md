@@ -5,6 +5,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.3.2] — 2026-04-06
+
+### Fixed
+- **HotBar click-through** (`src/systems/InteractionSystem.ts`): Clicking hotbar slots (tools, seeds,
+  items) also moved the player to the tile underneath the slot. The v1.3.1 `isBlocked` callback only
+  checked for *open panels* — the HotBar is always visible and was never considered a blocking condition.
+
+  **Fix:** `InteractionSystem.bindInput()` now inspects the `currentlyOver` array passed by Phaser's
+  `pointerdown` event. If any hit game object has `scrollFactorX === 0` (i.e. it is a fixed-position
+  UI element rather than a world object), the handler returns early. This catches all UI elements that
+  use `setScrollFactor(0)`: HotBar slots, DialogBox blocker, TutorialPopup background, panel overlays.
+
+- **Tutorial popup rendered behind world objects** (`src/ui/TutorialPopup.ts`): Same container-depth
+  bug fixed in v1.3.1 for panels — the TutorialPopup container had no depth set, defaulting to 0.
+  Buildings (depth 10) and NPCs (depth 20) rendered on top of the tutorial text.
+
+  **Fix:**
+  - Set `.setDepth(150)` on the TutorialPopup container.
+  - Made the popup's background rectangle interactive (`.setInteractive()`) so the `scrollFactorX`
+    check in InteractionSystem blocks clicks on the tutorial area from moving the player.
+
+---
+
 ## [v1.3.1] — 2026-04-06
 
 ### Fixed
