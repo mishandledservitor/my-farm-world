@@ -95,6 +95,18 @@ export class GameScene extends Phaser.Scene {
   // Track how many days each tilled tile has been untended (no crop on it)
   private tileUntendedDays: Map<string, number> = new Map();
 
+  // Bound EventBus listeners (stored so they can be removed on shutdown)
+  private readonly onMidnight = () => { if (!this.sleepingIn) this.triggerSleep(); };
+  private readonly onSleepEnd = ({ day }: { day: number }) => {
+    this.sleepingIn = false;
+    this.animalSystem.advanceDay();
+    this.timeSystem.advanceDay();
+    this.timeSystem.start();
+    this.tutorialSystem.advanceIfAt('sleep');
+    EventBus.emit('time:new-day', { day });
+  };
+  private readonly onNewDay: (data: { day: number }) => void = ({ day }) => this.handleNewDay(day);
+
   // Non-walkable barn/station tiles
   private readonly barnTiles = new Set<string>([
     '3,10','4,10','3,11','4,11','3,12','4,12',  // barn 2×3 footprint
@@ -132,6 +144,9 @@ export class GameScene extends Phaser.Scene {
     // Tutorial — created after all systems exist
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'GameScene');
     this.events.once('shutdown', () => {
+      EventBus.off('time:midnight', this.onMidnight);
+      EventBus.off('sleep:end', this.onSleepEnd);
+      EventBus.off('time:new-day', this.onNewDay);
       this.tutorialPopup.destroy();
       this.hotBar.destroy();
       this.rainEmitter?.destroy();
@@ -511,92 +526,94 @@ export class GameScene extends Phaser.Scene {
   // ── Crop listener ──────────────────────────────────────────────────────────
 
   private setupCropListeners(): void {
-    EventBus.on('time:new-day', ({ day }) => {
-      const currentSeason = getSeasonFromDay(day);
-      // Advance crops without withering (pass undefined to skip season check)
-      this.cropSystem.advanceDay(undefined);
+    EventBus.on('time:new-day', this.onNewDay);
+  }
 
-      for (const crop of this.cropSystem.getAllCrops()) {
-        this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
+  private handleNewDay(day: number): void {
+    const currentSeason = getSeasonFromDay(day);
+    // Advance crops without withering (pass undefined to skip season check)
+    this.cropSystem.advanceDay(undefined);
+
+    for (const crop of this.cropSystem.getAllCrops()) {
+      this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
+    }
+    this.energySystem.fullRestore();
+
+    // Roll new weather for the day
+    this.weatherSystem.advanceDay();
+    this.updateRainEffect();
+
+    // Dry out watered tiles: watered_dirt → dirt
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        if (this.tileMap[row][col] === TILE.WATERED_DIRT) {
+          this.setTile(col, row, TILE.DIRT);
+        }
       }
-      this.energySystem.fullRestore();
+    }
 
-      // Roll new weather for the day
-      this.weatherSystem.advanceDay();
-      this.updateRainEffect();
-
-      // Dry out watered tiles: watered_dirt → dirt
+    // Rain auto-waters all tilled soil and crops
+    if (this.weatherSystem.isRainy) {
       for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
-          if (this.tileMap[row][col] === TILE.WATERED_DIRT) {
-            this.setTile(col, row, TILE.DIRT);
+          if (this.tileMap[row][col] === TILE.DIRT) {
+            this.setTile(col, row, TILE.WATERED_DIRT);
+            this.cropSystem.water(col, row);
           }
         }
       }
+    }
 
-      // Rain auto-waters all tilled soil and crops
-      if (this.weatherSystem.isRainy) {
-        for (let row = 0; row < MAP_ROWS; row++) {
-          for (let col = 0; col < MAP_COLS; col++) {
-            if (this.tileMap[row][col] === TILE.DIRT) {
-              this.setTile(col, row, TILE.WATERED_DIRT);
-              this.cropSystem.water(col, row);
-            }
+    // Sprinkler auto-watering: each sprinkler waters the 4 cardinal tiles
+    for (const key of this.sprinklers) {
+      const [sx, sy] = key.split(',').map(Number);
+      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        const nx = sx + dx;
+        const ny = sy + dy;
+        if (nx >= 0 && ny >= 0 && nx < MAP_COLS && ny < MAP_ROWS) {
+          if (this.tileMap[ny][nx] === TILE.DIRT) {
+            this.setTile(nx, ny, TILE.WATERED_DIRT);
+            this.cropSystem.water(nx, ny);
           }
         }
       }
+    }
 
-      // Sprinkler auto-watering: each sprinkler waters the 4 cardinal tiles
-      for (const key of this.sprinklers) {
-        const [sx, sy] = key.split(',').map(Number);
-        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
-          const nx = sx + dx;
-          const ny = sy + dy;
-          if (nx >= 0 && ny >= 0 && nx < MAP_COLS && ny < MAP_ROWS) {
-            if (this.tileMap[ny][nx] === TILE.DIRT) {
-              this.setTile(nx, ny, TILE.WATERED_DIRT);
-              this.cropSystem.water(nx, ny);
-            }
-          }
-        }
-      }
+    // Track untended tilled tiles and revert to grass after 3 days
+    const occupiedTiles = new Set(
+      this.cropSystem.getAllCrops().map(c => `${c.tileX},${c.tileY}`),
+    );
 
-      // Track untended tilled tiles and revert to grass after 3 days
-      const occupiedTiles = new Set(
-        this.cropSystem.getAllCrops().map(c => `${c.tileX},${c.tileY}`),
-      );
-
-      for (let row = 0; row < MAP_ROWS; row++) {
-        for (let col = 0; col < MAP_COLS; col++) {
-          const key = `${col},${row}`;
-          if (this.tileMap[row][col] === TILE.DIRT && !occupiedTiles.has(key)) {
-            const days = (this.tileUntendedDays.get(key) ?? 0) + 1;
-            if (days >= 3) {
-              this.setTile(col, row, TILE.GRASS);
-              this.tileUntendedDays.delete(key);
-            } else {
-              this.tileUntendedDays.set(key, days);
-            }
-          } else {
-            // If tile has a crop or is no longer dirt, reset counter
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        const key = `${col},${row}`;
+        if (this.tileMap[row][col] === TILE.DIRT && !occupiedTiles.has(key)) {
+          const days = (this.tileUntendedDays.get(key) ?? 0) + 1;
+          if (days >= 3) {
+            this.setTile(col, row, TILE.GRASS);
             this.tileUntendedDays.delete(key);
+          } else {
+            this.tileUntendedDays.set(key, days);
           }
+        } else {
+          // If tile has a crop or is no longer dirt, reset counter
+          this.tileUntendedDays.delete(key);
         }
       }
+    }
 
-      // Dog bonus: alert when crops are harvest-ready
-      const hasDog = this.pets.some(p => p.petType === 'dog');
-      if (hasDog) {
-        const readyCount = this.cropSystem.getAllCrops().filter(c => c.growthStage >= 3).length;
-        if (readyCount > 0) {
-          this.showFloatingText(
-            this.player.tileX, this.player.tileY,
-            `Dog: ${readyCount} crop${readyCount > 1 ? 's' : ''} ready!`,
-            0x99e550,
-          );
-        }
+    // Dog bonus: alert when crops are harvest-ready
+    const hasDog = this.pets.some(p => p.petType === 'dog');
+    if (hasDog) {
+      const readyCount = this.cropSystem.getAllCrops().filter(c => c.growthStage >= 3).length;
+      if (readyCount > 0) {
+        this.showFloatingText(
+          this.player.tileX, this.player.tileY,
+          `Dog: ${readyCount} crop${readyCount > 1 ? 's' : ''} ready!`,
+          0x99e550,
+        );
       }
-    });
+    }
   }
 
   // ── Crop sprites ───────────────────────────────────────────────────────────
@@ -760,18 +777,8 @@ export class GameScene extends Phaser.Scene {
   // ── Sleep ──────────────────────────────────────────────────────────────────
 
   private setupSleepListeners(): void {
-    EventBus.on('time:midnight', () => {
-      if (!this.sleepingIn) this.triggerSleep();
-    });
-
-    EventBus.on('sleep:end', ({ day }) => {
-      this.sleepingIn = false;
-      this.animalSystem.advanceDay();
-      this.timeSystem.advanceDay();
-      this.timeSystem.start();
-      this.tutorialSystem.advanceIfAt('sleep');
-      EventBus.emit('time:new-day', { day });
-    });
+    EventBus.on('time:midnight', this.onMidnight);
+    EventBus.on('sleep:end', this.onSleepEnd);
   }
 
   triggerSleep(): void {

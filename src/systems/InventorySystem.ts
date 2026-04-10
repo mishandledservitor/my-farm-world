@@ -21,10 +21,12 @@ export class InventorySystem {
   // ── Accessors ──────────────────────────────────────────────────────────────
 
   get selectedItemId(): string | null {
+    if (this.selectedSlot < 0 || this.selectedSlot >= INVENTORY_SIZE) return null;
     return this.slots[this.selectedSlot].itemId;
   }
 
   get selected(): InventorySlot {
+    if (this.selectedSlot < 0 || this.selectedSlot >= INVENTORY_SIZE) return { itemId: null, quantity: 0 };
     return this.slots[this.selectedSlot];
   }
 
@@ -115,6 +117,7 @@ export class InventorySystem {
   }
 
   consumeSelectedItem(): void {
+    if (this.selectedSlot < 0 || this.selectedSlot >= INVENTORY_SIZE) return;
     const slot = this.slots[this.selectedSlot];
     if (!slot.itemId) return;
     slot.quantity--;

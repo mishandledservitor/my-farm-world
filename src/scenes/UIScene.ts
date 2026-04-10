@@ -94,7 +94,7 @@ export class UIScene extends Phaser.Scene {
     this.coordText.setScrollFactor(0).setDepth(100);
 
     // ── Version (bottom-right) ───────────────────────────────────────────────
-    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 20, 'v1.3.2', {
+    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 20, 'v1.4.0', {
       ...baseStyle, fontSize: '13px', color: '#666666',
     });
     this.versionText.setOrigin(1, 0).setScrollFactor(0).setDepth(100);

@@ -20,7 +20,7 @@ A slow-paced, Stardew Valley-inspired farming simulation game built entirely in 
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Game framework | **Phaser 3.80** | Scene manager, pointer input, animation, RenderTexture |
+| Game framework | **Phaser 3.80+** | Scene manager, pointer input, animation, RenderTexture |
 | Bundler | **Vite 5** | Fast HMR, zero-config TypeScript |
 | Language | **TypeScript 5 strict** | Full type safety across all systems |
 | Tests | **Vitest 1** | Same Vite config, no DOM required for logic tests |
@@ -39,9 +39,9 @@ src/
     TerrainSprites.ts        Grass, dirt, watered-dirt, stone, water, wood-floor
     UISprites.ts             Click-ring, slot, heart, bed, farmhouse, tree, fence
     CropSprites.ts           Per-crop, per-stage sprites
-    ItemSprites.ts           12×12 item icons + ITEM_ICONS lookup
+    ItemSprites.ts           12×12 item icons + ITEM_ICONS lookup (all items including fish, sprinkler, fertilizer)
     AnimalSprites.ts         Chicken, cow, barn, trough, churn, mill, oven
-    EnvironmentSprites.ts    Berry bush, cave entrance, mine rock, stump + resource icons
+    EnvironmentSprites.ts    Berry bush, cave entrance, mine rock, stump, sprinkler, compost bin + resource icons
     PetSprites.ts            Dog (brown), cat (grey + green eyes)
     NPCSprites.ts            Mabel, Finn, Rosa (16×16 each)
     PlayerSprites.ts         Player walk/idle sprite sheet (4 dirs × 4 frames)
@@ -49,11 +49,12 @@ src/
     BootScene.ts             Registers all textures; must succeed before any world scene
     MainMenuScene.ts         New Game / Continue; routes to correct saved scene
     CharacterCustomScene.ts  Skin/hair/shirt customisation; palette-swap
-    GameScene.ts             Farm (30×24); crops, animals, sleep, forest/village transitions
+    GameScene.ts             Farm (30×24); crops, animals, weather, sprinklers, sleep, forest/village/farmhouse transitions
+    FarmhouseScene.ts        Farmhouse interior (8×6); bed for sleeping, exit door
     VillageScene.ts          Village (20×15); NPCs, shop, mine entrance
     ForestScene.ts           Forest (20×15); trees, bushes, dog cutscene
     MineScene.ts             Mine (20×15, 5 floors); ore, ladders
-    UIScene.ts               Parallel HUD: clock, season, coins, debug coords
+    UIScene.ts               Parallel HUD: clock, season, weather, coins, debug coords
     SleepTransitionScene.ts  Fade + "Day N" / "Season Complete!" card
     DialogScene.ts           (reserved; dialog is currently inline in VillageScene)
   systems/
@@ -66,7 +67,8 @@ src/
     AnimalSystem.ts          Hunger, produce, advanceDay; serialize/deserialize
     ProcessingSystem.ts      Station jobs (churn/mill/oven); progress tracking
     EnergySystem.ts          100-point energy; spend/restore; serialize
-    InventorySystem.ts       24-slot inventory + 8-slot hotbar; selectedItem
+    InventorySystem.ts       24-slot inventory + 8-slot hotbar; selectedItem; bounds-safe accessors
+    WeatherSystem.ts         Daily weather roll (sunny/cloudy/rainy); weighted random; rain flag
     TutorialSystem.ts        Named-step state machine; advanceIfAt(stepName)
     UnlockSystem.ts          Forest (Day 7 + axe) and Mine (1000 coins) gate checks
   entities/
@@ -78,8 +80,8 @@ src/
     dialogs.ts               NPC_DIALOGS, NPC_HAS_SHOP, NPC_SHOP_STOCK
     animals.ts               (inlined in AnimalSystem)
   ui/
-    HotBar.ts                8-slot hotbar; selected-item highlight; energy bar
-    InventoryPanel.ts        24-slot grid panel
+    HotBar.ts                8-slot hotbar; selected-item highlight; energy bar; BAG button
+    InventoryPanel.ts        24-slot grid panel; click-to-swap rearranging
     ShopPanel.ts             Sell column + buy column; sellMultiplier for cat bonus;
                               container depth 200 for correct z-ordering
     CraftingPanel.ts         Per-station recipe list or active-job progress bar;
@@ -117,24 +119,28 @@ tests/
                            │
                 ┌──────────▼──────────┐
                 │   MainMenuScene     │  New Game → CharacterCustomScene
-                └──────────┬──────────┘  Continue → saved scene
+                └──────────┬──────────┘  Continue / Load → saved scene
                            │
           ┌────────────────┼────────────────┐
           │                │                │
   ┌───────▼──────┐ ┌───────▼──────┐ ┌──────▼───────┐
   │  GameScene   │ │VillageScene  │ │ ForestScene  │
   │  (farm 30×24)│ │(village 20×15│ │(forest 20×15)│
-  └───────┬──────┘ └───────┬──────┘ └──────────────┘
-          │                │
-    SleepTransition  ┌─────▼──────┐
-                     │ MineScene  │
-                     │(mine 20×15)│
-                     └────────────┘
+  └───┬─────┬────┘ └───────┬──────┘ └──────────────┘
+      │     │              │
+      │  ┌──▼────────────┐ │
+      │  │FarmhouseScene │ │
+      │  │ (interior 8×6)│ │
+      │  └───────────────┘ │
+      │                ┌───▼──────┐
+  SleepTransition      │ MineScene│
+  (overlay on           │(20×15)  │
+   Game or Farmhouse)   └─────────┘
 
 UIScene ─── always parallel on top (never scrolls)
 ```
 
-**Rule**: world scenes are mutually exclusive. UIScene is always active alongside one world scene. SleepTransitionScene is launched on top of GameScene (not as a replacement) and removes itself on completion.
+**Rule**: world scenes are mutually exclusive. UIScene is always active alongside one world scene. SleepTransitionScene is launched on top of the current world scene (GameScene or FarmhouseScene) and removes itself on completion. EventBus listeners must be cleaned up in each scene's `shutdown` handler to prevent stale callbacks.
 
 ---
 
@@ -142,13 +148,16 @@ UIScene ─── always parallel on top (never scrolls)
 
 ```
 Wake up (6 AM)
+  → Weather rolled (rain auto-waters, sprinklers water neighbours)
   → Till soil (hoe, -2 energy)
-  → Water crops (watering can, -1 energy per tile)
+  → Water crops (watering can, -1 energy per tile — skip if rainy)
   → Plant seeds (select seed in hotbar, click watered dirt, -3 energy)
+  → Apply fertilizer to speed up growth
   → Visit barn → feed animals, collect produce
-  → Process produce (churn/mill/oven)
-  → Walk east → VillageScene → sell to Mabel → buy seeds
-  → Return home
+  → Process produce (churn/mill/oven/compost)
+  → Fish at the pond (fishing rod, -2 energy)
+  → Walk east → VillageScene → sell to Mabel → buy seeds/tools
+  → Return home → enter farmhouse
   → Sleep (click bed or wait for midnight)
   → new-day advances crop stages, animal hunger, restores energy
 ```
@@ -165,6 +174,32 @@ Wake up (6 AM)
 | Winter | 91–120 | _(none — only Wheat grows year-round)_ |
 
 Crops planted in the wrong season are blocked at planting time. Crops in the field when a season ends **wither** (removed from CropSystem, sprite destroyed, "Withered!" notification).
+
+---
+
+## Weather
+
+| Weather | Weight | Effect |
+|---|---|---|
+| Sunny | 40% | Normal day — no automatic watering |
+| Cloudy | 30% | Normal day — no automatic watering |
+| Rainy | 30% | All tilled soil and crops are auto-watered at dawn |
+
+Weather is rolled each morning via `WeatherSystem.advanceDay()`. The current weather is displayed in the UIScene clock panel. Rain triggers a particle emitter overlay on the farm.
+
+**Morning water order**: (1) All watered tiles dry to dirt → (2) Rain waters all dirt tiles (if rainy) → (3) Sprinklers water their 4 cardinal neighbours → (4) Crops advance growth.
+
+---
+
+## Sprinklers
+
+Buy from Rosa for 200g. Place on any grass tile on the farm. Each sprinkler automatically waters the 4 adjacent tiles (N/S/E/W) every morning, after the rain step. Sprinkler positions are persisted in `SaveFile.sprinklers` as `"x,y"` strings.
+
+---
+
+## Compost & Fertilizer
+
+The compost bin is a processing station next to the oven. Compost any crop item (turnip, carrot, wheat, pumpkin, strawberry, wild berry) to produce fertilizer (120 min). Apply fertilizer to a growing crop to instantly advance it one growth stage.
 
 ---
 
@@ -217,6 +252,8 @@ Pets follow the player using simple directional movement (one step per 600 ms), 
 | `lifetimeCoinsEarned` | `number` | Cumulative sell earnings |
 | `lifetimeItemsSold` | `number` | Cumulative items sold (by quantity) |
 | `unlockedAreas` | `string[]` | Reserved for future area tracking |
+| `weather` | `string` | Current weather type (sunny/cloudy/rainy) |
+| `sprinklers` | `string[]` | Sprinkler positions as `"x,y"` strings |
 
 ---
 
@@ -227,12 +264,16 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Event | Payload | Emitted by |
 |---|---|---|
 | `time:tick` | `{ hour, minute, totalMinutes }` | TimeSystem (hourly) |
-| `time:new-day` | `{ day }` | TimeSystem.advanceDay() |
+| `time:new-day` | `{ day }` | GameScene / FarmhouseScene (after sleep:end) |
 | `time:midnight` | — | TimeSystem |
 | `sleep:end` | `{ day }` | SleepTransitionScene |
+| `weather:changed` | `{ weather }` | WeatherSystem.advanceDay() |
 | `player:moved` | `{ tileX, tileY }` | MovementSystem |
 | `coins:changed` | `{ coins }` | ShopPanel |
+| `inventory:changed` | — | InventorySystem (all mutations) |
 | `crop:planted/watered/harvested/withered` | `{ tileX, tileY }` | CropSystem |
+
+**Important**: EventBus listeners registered in scene `create()` must be removed in the scene's `shutdown` handler using stored bound references. Anonymous closures cannot be removed by reference and will cause stale-listener crashes when scenes are swapped.
 
 ---
 
@@ -244,6 +285,7 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 4. The named texture is available globally in Phaser's `TextureManager` from this point.
 5. Player and NPC sprites use `registerSpriteSheet` to create multi-frame textures; frame data is registered manually so Phaser animations can reference them by index.
 6. Character customisation: `refreshPlayerTextures(scene, appearance)` applies `applyPaletteSwap` to the base sprite grids, replacing mask colours with the player's chosen skin/hair/shirt.
+7. **Pastel post-processing**: `pastelizeSprite(grid)` in `PixelArtUtils` transforms all non-terrain sprites at registration time: (a) maps DB32 colours to softer pastel equivalents, (b) adds 1px black outlines around filled pixels, (c) adds a subtle bottom-right drop shadow. Terrain tiles are excluded to preserve seamless tiling.
 
 ---
 
@@ -257,6 +299,7 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Oven | Flour | Bread | 120 min |
 | Oven | Strawberry | Jam | 90 min |
 | Oven | Wild Berry | Jam | 90 min |
+| Compost | Any crop | Fertilizer | 120 min |
 
 ---
 
@@ -282,14 +325,17 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Wood | 15g | — | Forest trees |
 | Wild Berry | 20g | — | Forest bushes |
 
-Seeds and tools are buy-only (no sell value). Cow costs 500g from Mabel.
+| Fish | 25g | — | Farm pond |
+| Fertilizer | — | — | Compost bin |
+
+Seeds and tools are buy-only (no sell value). Cow costs 500g from Mabel. Sprinkler costs 200g from Rosa. Fishing rod costs 150g from Rosa.
 
 ---
 
 ## Git Branching Convention
 
 ```
-main              tagged stable releases (v0.1 … v1.3.2)
+main              tagged stable releases (v0.1 … v1.4.0)
 feature/vX.Y-name one branch per version, merged back via --no-ff merge commit
 ```
 

@@ -27,6 +27,15 @@ export class FarmhouseScene extends Phaser.Scene {
   private sleepingIn = false;
   private transitioning = false;
 
+  // Bound EventBus listeners (stored so they can be removed on shutdown)
+  private readonly onMidnight = () => { if (!this.sleepingIn) this.triggerSleep(); };
+  private readonly onSleepEnd = ({ day }: { day: number }) => {
+    this.sleepingIn = false;
+    this.timeSystem.advanceDay();
+    this.timeSystem.start();
+    EventBus.emit('time:new-day', { day });
+  };
+
   constructor() {
     super({ key: 'FarmhouseScene' });
   }
@@ -45,7 +54,11 @@ export class FarmhouseScene extends Phaser.Scene {
     this.launchUI();
     this.disableContextMenu();
 
-    this.events.once('shutdown', () => { this.hotBar.destroy(); });
+    this.events.once('shutdown', () => {
+      EventBus.off('time:midnight', this.onMidnight);
+      EventBus.off('sleep:end', this.onSleepEnd);
+      this.hotBar.destroy();
+    });
   }
 
   private renderRoom(): void {
@@ -176,16 +189,8 @@ export class FarmhouseScene extends Phaser.Scene {
   // ── Sleep ──────────────────────────────────────────────────────────────────
 
   private setupSleepListeners(): void {
-    EventBus.on('time:midnight', () => {
-      if (!this.sleepingIn) this.triggerSleep();
-    });
-
-    EventBus.on('sleep:end', ({ day }) => {
-      this.sleepingIn = false;
-      this.timeSystem.advanceDay();
-      this.timeSystem.start();
-      EventBus.emit('time:new-day', { day });
-    });
+    EventBus.on('time:midnight', this.onMidnight);
+    EventBus.on('sleep:end', this.onSleepEnd);
   }
 
   private triggerSleep(): void {

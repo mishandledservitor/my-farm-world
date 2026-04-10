@@ -41,6 +41,9 @@ export type GameEventMap = {
   'crop:harvested':  { tileX: number; tileY: number; cropType: string };
   'crop:withered':   { tileX: number; tileY: number };
 
+  // Weather
+  'weather:changed': { weather: 'sunny' | 'cloudy' | 'rainy' };
+
   // Tutorial
   'tutorial:step':   { step: number };
 };

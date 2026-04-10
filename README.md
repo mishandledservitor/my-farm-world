@@ -8,14 +8,21 @@ A peaceful farming life simulation built with Phaser 3 and TypeScript — inspir
 
 ## Features
 
-- **Farming** — Till, water, plant, and harvest crops across four seasons. Out-of-season crops wither at midnight.
+- **Farming** — Till, water, plant, and harvest crops across four seasons.
+- **Weather** — Random daily weather (sunny, cloudy, rainy). Rain auto-waters all tilled soil.
+- **Sprinklers** — Buy and place sprinklers to auto-water adjacent tiles every morning.
+- **Compost & fertilizer** — Compost crops into fertilizer; apply to instantly advance crop growth.
 - **Animals** — A chicken in your barn from Day 1; buy a cow from Mabel for dairy production.
 - **Processing** — Churn butter and cheese, mill flour, bake bread, make jam in the village oven.
 - **Village** — Sell goods to Mabel (with seasonal price bonuses), buy tools from Rosa, chat with Finn.
+- **Fishing** — Buy a fishing rod from Rosa and catch fish from the farm pond.
 - **Unlockable areas** — Whispering Forest (Day 7 + axe) and the Mine (1 000 lifetime coins earned).
 - **Pets** — Adopt Buddy the dog (Forest, Day 10) and Luna the cat (50 items sold). Both follow you and grant passive bonuses.
+- **Farmhouse** — Enter your farmhouse to sleep; interior room with bed and exit.
 - **Seasons** — 30-day seasons cycling Spring → Summer → Fall → Winter with a season-complete card each cycle.
-- **Save / load** — Auto-saves on every sleep; resume from the main menu.
+- **Inventory** — 24-slot backpack panel to view and rearrange all items.
+- **Save / load** — Auto-saves on every sleep; export/import saves as JSON files.
+- **Pastel art style** — Soft pastel colours, black outlines, and drop shadows on all sprites.
 - **Tutorial** — Step-by-step guidance on the first playthrough.
 - **Point-and-click only** — No keyboard required.
 
@@ -54,12 +61,13 @@ Double-click **`Launch My Farm World.command`** in Finder to start the dev serve
 | Action | Input |
 |---|---|
 | Move player | Left-click anywhere |
-| Interact / harvest / chop / mine | Left-click on object |
-| Open inventory | Click bag icon (HUD) |
+| Interact / harvest / chop / mine / fish | Left-click on object |
+| Enter/exit farmhouse | Click farmhouse / walk to EXIT door |
+| Open inventory | Click BAG icon (HUD) |
 | Open crafting | Click anvil icon (HUD) |
 | Pet your pet | Left-click on pet |
 | Advance dialog | Left-click |
-| Sleep early | Click the bed |
+| Sleep | Enter farmhouse, click the bed |
 
 ---
 
@@ -81,11 +89,11 @@ src/
   entities/       Player, Crop, Animal, Pet, NPC, ProcessingStation
   save/           SaveSchema, SaveManager, MigrationRegistry
   scenes/         BootScene, MainMenuScene, CharacterCustomScene,
-                  GameScene, VillageScene, ForestScene, MineScene,
-                  UIScene, SleepTransitionScene
+                  GameScene, FarmhouseScene, VillageScene, ForestScene,
+                  MineScene, UIScene, SleepTransitionScene
   sprites/        pixel-art arrays for every game object
   systems/        TimeSystem, CropSystem, AnimalSystem, ProcessingSystem,
-                  InventorySystem, UnlockSystem, TutorialSystem
+                  InventorySystem, WeatherSystem, UnlockSystem, TutorialSystem
   ui/             ShopPanel, CraftingPanel, InventoryPanel, DialogBox,
                   HotBar, TutorialPopup
   utils/          AStarPathfinder, EventBus, SeasonUtils, PixelArtUtils
@@ -134,4 +142,4 @@ The game is a fully static site — no server required.
 
 ## Version
 
-Current release: **v1.3.2** — see [CHANGELOG.md](CHANGELOG.md) for full history.
+Current release: **v1.4.0** — see [CHANGELOG.md](CHANGELOG.md) for full history.

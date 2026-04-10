@@ -5,6 +5,78 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.4.0] — 2026-04-10
+
+### Added
+- **Weather system** (`src/systems/WeatherSystem.ts`): Random daily weather — sunny (40%), cloudy (30%),
+  rainy (30%). Rolled each morning via weighted random. Rain auto-waters all tilled soil and crops,
+  saving the player energy on rainy days. Weather icon and label displayed in the UIScene clock panel.
+  Rain particle effects overlay the farm when active.
+
+- **Sprinklers** — Buy from Rosa's shop for 200g and place on the farm. Each sprinkler automatically
+  waters the 4 cardinal-adjacent tiles every morning, before crop growth is processed. Sprinkler
+  positions are persisted in save data (`SaveFile.sprinklers`).
+
+- **Compost bin & fertilizer** — New processing station placed next to the oven on the farm. Compost
+  any crop item (turnip, carrot, wheat, pumpkin, strawberry, wild berry) into fertilizer. Apply
+  fertilizer to a growing crop to instantly advance it one growth stage.
+
+- **Farmhouse interior** (`src/scenes/FarmhouseScene.ts`): The farmhouse is now an enterable building.
+  Click the farmhouse on the farm to enter an 8×6 interior room with a bed. Sleeping now requires
+  entering the farmhouse and clicking the bed (or waiting until midnight triggers auto-sleep).
+  Exit via the door at the bottom center.
+
+- **Inventory panel** (`src/ui/InventoryPanel.ts`): Full 24-slot backpack panel accessible via the
+  BAG button in the HotBar. Shows all slots (hotbar 1–8 + backpack 9–24) with item icons, quantities,
+  and names. Click-to-swap mechanic for rearranging items between slots.
+
+- **Save/Load to file** (`src/save/SaveManager.ts`): Export saves as downloadable JSON files and
+  import from file on the main menu. LOAD FILE button added alongside NEW GAME / CONTINUE.
+
+- **Fishing** — Fishing rod tool (buy from Rosa) to catch fish from the farm pond. Fish item added
+  as a sellable resource.
+
+- **Pastel art style** (`src/utils/PixelArtUtils.ts`): All sprites now go through a `pastelizeSprite()`
+  post-processing pass at boot time that applies: (1) pastel colour mapping for softer tones,
+  (2) 1px black outlines on all non-terrain sprites, (3) subtle drop shadow to the bottom-right.
+  Terrain tiles are excluded to preserve seamless tiling.
+
+- **Missing item icons**: Added icons for wheat, pumpkin, strawberry, jam, cheese, sprinkler,
+  fertilizer, compost bin, and fish.
+
+- **`weather:changed` event** added to `EventBus` type map.
+
+### Changed
+- Soil dries overnight — watered dirt reverts to regular dirt each morning before rain/sprinkler
+  watering is applied.
+- Tilled ground reverts to grass after 3 consecutive days without a crop planted on it.
+- Plants no longer wither on season change (season-restriction only applies at planting time).
+- No tool selected by default when entering any scene (prevents accidental tilling).
+- Darker mine rock sprites to better distinguish from stone floor background.
+- All text labels increased in size for better readability across scenes.
+
+### Fixed
+- **Game freeze after a few seconds** (`src/systems/InventorySystem.ts`): `selectedItemId`,
+  `selected`, and `consumeSelectedItem` accessed `this.slots[-1]` when `selectedSlot` was set
+  to -1 (by `deselectAll()` or `selectSlot(-1)`). The resulting `TypeError` crashed inside Phaser's
+  update loop, freezing all input processing. Fixed by adding bounds checks that return safe defaults
+  when `selectedSlot` is out of range.
+
+- **Stuck in bedroom after sleeping in farmhouse** (`src/scenes/GameScene.ts`,
+  `src/scenes/FarmhouseScene.ts`, `src/utils/EventBus.ts`): Stale EventBus listeners from
+  GameScene's `setupSleepListeners()` and `setupCropListeners()` continued firing after the scene
+  was shut down. When sleeping in the farmhouse, the `sleep:end` event triggered GameScene's stale
+  listener which called `this.timeSystem.advanceDay()` on a destroyed scene, emitting `time:new-day`,
+  which in turn triggered the stale crop listener calling `this.setTile()` — crashing with
+  `Cannot read properties of undefined (reading 'sys')`.
+
+  **Fix:** Converted all EventBus listeners in both GameScene and FarmhouseScene from anonymous
+  closures to bound class properties (`onMidnight`, `onSleepEnd`, `onNewDay`). Added
+  `EventBus.off()` calls for each listener in both scenes' `shutdown` event handlers, ensuring
+  listeners are cleaned up when a scene is stopped.
+
+---
+
 ## [v1.3.2] — 2026-04-06
 
 ### Fixed
