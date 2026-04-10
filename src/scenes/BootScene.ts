@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { registerPixelTexture } from '../utils/PixelArtUtils';
+import { registerPixelTexture, pastelizeSprite } from '../utils/PixelArtUtils';
 import { PlayerAppearance, DEFAULT_APPEARANCE, refreshPlayerTextures, registerNPCTextures } from '../utils/PlayerTextureUtils';
 
 // Terrain
@@ -55,7 +55,11 @@ export class BootScene extends Phaser.Scene {
     // Tile sprites: setScale(SCALE=3) → 16*3=48 px displayed per tile.
     // Player sprites: setScale(SCALE=3) → 16*3=48 px displayed.
 
-    // ── Terrain tiles (16×16 each) ────────────────────────────────────────────
+    // Helper: register with pastel post-processing (outlines + shadow + soft colors)
+    const p = (key: string, grid: number[][], px = 1) =>
+      registerPixelTexture(this, key, pastelizeSprite(grid), px);
+
+    // ── Terrain tiles (16×16 each) — NO pastelize (they tile seamlessly) ──────
     registerPixelTexture(this, 'tile-grass',        TILE_GRASS,        1);
     registerPixelTexture(this, 'tile-dirt',         TILE_DIRT,         1);
     registerPixelTexture(this, 'tile-watered-dirt', TILE_WATERED_DIRT, 1);
@@ -63,53 +67,53 @@ export class BootScene extends Phaser.Scene {
     registerPixelTexture(this, 'tile-water',        TILE_WATER,        1);
     registerPixelTexture(this, 'tile-wood-floor',   TILE_WOOD_FLOOR,   1);
 
-    // ── World objects (all 16×16 or smaller) ─────────────────────────────────
-    registerPixelTexture(this, 'farmhouse',   FARMHOUSE,    1);
-    registerPixelTexture(this, 'tree-top',    TREE_TOP,     1);
-    registerPixelTexture(this, 'tree-trunk',  TREE_TRUNK,   1);
-    registerPixelTexture(this, 'fence-post',  FENCE_POST,   1);
-    registerPixelTexture(this, 'bed',         BED,          1);
+    // ── World objects (pastelized with outlines + shadow) ─────────────────────
+    p('farmhouse',   FARMHOUSE);
+    p('tree-top',    TREE_TOP);
+    p('tree-trunk',  TREE_TRUNK);
+    p('fence-post',  FENCE_POST);
+    p('bed',         BED);
 
-    // ── UI elements (displayed with explicit scale in their consumers) ─────────
-    registerPixelTexture(this, 'click-ring',  CLICK_RING,   1); // 8×8 raw
-    registerPixelTexture(this, 'slot-bg',     SLOT_BG,      1); // 18×18 raw
+    // ── UI elements — NO pastelize for slot chrome; yes for iconic elements ───
+    registerPixelTexture(this, 'click-ring',  CLICK_RING,   1);
+    registerPixelTexture(this, 'slot-bg',     SLOT_BG,      1);
     registerPixelTexture(this, 'slot-hover',  SLOT_HOVER,   1);
-    registerPixelTexture(this, 'coin-icon',   COIN_ICON,    1);
-    registerPixelTexture(this, 'heart',       HEART,        1);
-    registerPixelTexture(this, 'sleep-z',     SLEEP_Z,      1);
+    p('coin-icon',   COIN_ICON);
+    p('heart',       HEART);
+    p('sleep-z',     SLEEP_Z);
 
-    // ── Crop stage sprites ────────────────────────────────────────────────────
+    // ── Crop stage sprites (pastelized) ───────────────────────────────────────
     Object.entries(CROP_SPRITES).forEach(([cropType, stages]) => {
       stages.forEach((grid, stage) => {
-        registerPixelTexture(this, `crop-${cropType}-${stage}`, grid, 1);
+        p(`crop-${cropType}-${stage}`, grid);
       });
     });
 
-    // ── Item icons (12×12 raw) ────────────────────────────────────────────────
+    // ── Item icons (12×12, pastelized) ────────────────────────────────────────
     Object.entries(ITEM_ICONS).forEach(([itemId, grid]) => {
-      registerPixelTexture(this, `icon-${itemId}`, grid, 1);
+      p(`icon-${itemId}`, grid);
     });
 
-    // ── Animals & processing stations ─────────────────────────────────────────
-    registerPixelTexture(this, 'chicken', SPRITE_CHICKEN, 1);
-    registerPixelTexture(this, 'cow',     SPRITE_COW,     1);
-    registerPixelTexture(this, 'barn',    SPRITE_BARN,    1);
-    registerPixelTexture(this, 'trough',  SPRITE_TROUGH,  1);
-    registerPixelTexture(this, 'churn',   SPRITE_CHURN,   1);
-    registerPixelTexture(this, 'mill',    SPRITE_MILL,    1);
-    registerPixelTexture(this, 'oven',    SPRITE_OVEN,    1);
+    // ── Animals & processing stations (pastelized) ────────────────────────────
+    p('chicken', SPRITE_CHICKEN);
+    p('cow',     SPRITE_COW);
+    p('barn',    SPRITE_BARN);
+    p('trough',  SPRITE_TROUGH);
+    p('churn',   SPRITE_CHURN);
+    p('mill',    SPRITE_MILL);
+    p('oven',    SPRITE_OVEN);
 
-    // ── Environment / unlockable areas ────────────────────────────────────────
-    registerPixelTexture(this, 'berry-bush',      SPRITE_BERRY_BUSH,      1);
-    registerPixelTexture(this, 'cave-entrance',   SPRITE_CAVE_ENTRANCE,   1);
-    registerPixelTexture(this, 'mine-rock',       SPRITE_MINE_ROCK,       1);
-    registerPixelTexture(this, 'stump',           SPRITE_STUMP,           1);
-    registerPixelTexture(this, 'sprinkler',      SPRITE_SPRINKLER,       1);
-    registerPixelTexture(this, 'compost',        SPRITE_COMPOST,         1);
+    // ── Environment / unlockable areas (pastelized) ───────────────────────────
+    p('berry-bush',      SPRITE_BERRY_BUSH);
+    p('cave-entrance',   SPRITE_CAVE_ENTRANCE);
+    p('mine-rock',       SPRITE_MINE_ROCK);
+    p('stump',           SPRITE_STUMP);
+    p('sprinkler',       SPRITE_SPRINKLER);
+    p('compost',         SPRITE_COMPOST);
 
-    // ── Pets ──────────────────────────────────────────────────────────────────
-    registerPixelTexture(this, 'pet-dog', SPRITE_DOG, 1);
-    registerPixelTexture(this, 'pet-cat', SPRITE_CAT, 1);
+    // ── Pets (pastelized) ─────────────────────────────────────────────────────
+    p('pet-dog', SPRITE_DOG);
+    p('pet-cat', SPRITE_CAT);
 
     // ── Player character (with palette swap) ──────────────────────────────────
     refreshPlayerTextures(this, appearance);
