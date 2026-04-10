@@ -57,26 +57,43 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (hasSave && summary) {
       // Show save info above Continue button
-      this.add.text(W / 2, 320, `Last saved: Day ${summary.day}  |  ${summary.coins} coins`, {
+      this.add.text(W / 2, 300, `Last saved: Day ${summary.day}  |  ${summary.coins} coins`, {
         fontFamily: '"Courier New"',
         fontSize: '14px',
         color: '#9badb7',
       }).setOrigin(0.5);
 
-      this.makeButton(W / 2, 375, 'CONTINUE', 0x306082, () => {
+      this.makeButton(W / 2, 350, 'CONTINUE', 0x306082, () => {
         const save = SaveManager.load()!;
         refreshPlayerTextures(this, save.appearance);
         const scene = save.currentScene ?? 'GameScene';
         this.scene.start(scene);
       });
 
-      this.makeButton(W / 2, 450, 'NEW GAME', 0x4a2d0a, () => {
+      this.makeButton(W / 2, 420, 'NEW GAME', 0x4a2d0a, () => {
         this.showNewGameConfirm();
       });
+
+      // Save/Load file buttons
+      this.makeButton(W / 2 - 128, 490, 'SAVE FILE', 0x37946e, () => {
+        SaveManager.exportToFile();
+      }, 180, 44, '18px');
+
+      this.makeButton(W / 2 + 128, 490, 'LOAD FILE', 0x37946e, () => {
+        SaveManager.importFromFile().then(ok => {
+          if (ok) this.scene.restart();
+        });
+      }, 180, 44, '18px');
     } else {
-      this.makeButton(W / 2, 395, 'NEW GAME', 0x4a8f3f, () => {
+      this.makeButton(W / 2, 370, 'NEW GAME', 0x4a8f3f, () => {
         this.scene.start('CharacterCustomScene');
       });
+
+      this.makeButton(W / 2, 440, 'LOAD FILE', 0x37946e, () => {
+        SaveManager.importFromFile().then(ok => {
+          if (ok) this.scene.restart();
+        });
+      }, 200, 44, '18px');
     }
 
     // ── Version watermark ─────────────────────────────────────────────────────
@@ -133,9 +150,7 @@ export class MainMenuScene extends Phaser.Scene {
     void container;
   }
 
-  private makeButton(x: number, y: number, label: string, color: number, onClick: () => void): void {
-    const w = 240;
-    const h = 54;
+  private makeButton(x: number, y: number, label: string, color: number, onClick: () => void, w = 240, h = 54, fontSize = '24px'): void {
 
     const bg = this.add.rectangle(x, y, w, h, color);
     bg.setStrokeStyle(2, 0xaaaaaa, 0.6);
@@ -143,7 +158,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const txt = this.add.text(x, y, label, {
       fontFamily: '"Courier New"',
-      fontSize: '24px',
+      fontSize,
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,

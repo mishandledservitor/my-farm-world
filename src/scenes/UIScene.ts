@@ -43,7 +43,7 @@ export class UIScene extends Phaser.Scene {
     const pad = 10;
 
     // ── Clock panel (top-left) ────────────────────────────────────────────────
-    this.clockBg = this.add.rectangle(pad + 82, pad + 28, 172, 60, 0x000000, 0.55);
+    this.clockBg = this.add.rectangle(pad + 100, pad + 34, 210, 74, 0x000000, 0.55);
     this.clockBg.setScrollFactor(0).setDepth(99);
 
     const baseStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -53,38 +53,38 @@ export class UIScene extends Phaser.Scene {
     };
 
     this.dayText = this.add.text(pad + 4, pad + 4, 'Day 1 (Spring 1)', {
-      ...baseStyle, fontSize: '14px', color: '#ffffff',
+      ...baseStyle, fontSize: '18px', color: '#ffffff',
     });
     this.dayText.setScrollFactor(0).setDepth(100);
 
-    this.seasonText = this.add.text(pad + 4, pad + 24, 'Spring', {
-      ...baseStyle, fontSize: '13px', color: seasonColor('spring'),
+    this.seasonText = this.add.text(pad + 4, pad + 28, 'Spring', {
+      ...baseStyle, fontSize: '16px', color: seasonColor('spring'),
     });
     this.seasonText.setScrollFactor(0).setDepth(100);
 
-    this.timeText = this.add.text(pad + 4, pad + 40, '6:00 AM', {
-      ...baseStyle, fontSize: '13px', color: '#ffff88',
+    this.timeText = this.add.text(pad + 4, pad + 50, '6:00 AM', {
+      ...baseStyle, fontSize: '16px', color: '#ffff88',
     });
     this.timeText.setScrollFactor(0).setDepth(100);
 
     // ── Coin display (top-right) ──────────────────────────────────────────────
-    const coinBg = this.add.rectangle(CANVAS_WIDTH - 70, pad + 16, 130, 32, 0x000000, 0.55);
+    const coinBg = this.add.rectangle(CANVAS_WIDTH - 80, pad + 18, 150, 38, 0x000000, 0.55);
     coinBg.setScrollFactor(0).setDepth(99);
 
-    this.coinText = this.add.text(CANVAS_WIDTH - 128, pad + 8, '$ 50', {
-      ...baseStyle, fontSize: '16px', color: '#f7c35e',
+    this.coinText = this.add.text(CANVAS_WIDTH - 148, pad + 6, '$ 50', {
+      ...baseStyle, fontSize: '20px', color: '#f7c35e',
     });
     this.coinText.setScrollFactor(0).setDepth(100);
 
     // ── Tile coords (bottom-left, debug) ──────────────────────────────────────
-    this.coordText = this.add.text(pad, CANVAS_HEIGHT - pad - 16, 'Tile: (0, 0)', {
-      ...baseStyle, fontSize: '12px', color: '#88ff88',
+    this.coordText = this.add.text(pad, CANVAS_HEIGHT - pad - 20, 'Tile: (0, 0)', {
+      ...baseStyle, fontSize: '15px', color: '#88ff88',
     });
     this.coordText.setScrollFactor(0).setDepth(100);
 
     // ── Version (bottom-right) ───────────────────────────────────────────────
-    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 16, 'v1.3.2', {
-      ...baseStyle, fontSize: '11px', color: '#666666',
+    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 20, 'v1.3.2', {
+      ...baseStyle, fontSize: '13px', color: '#666666',
     });
     this.versionText.setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
@@ -97,10 +97,10 @@ export class UIScene extends Phaser.Scene {
   private createSleepHint(): void {
     this.sleepHint = this.add.text(
       CANVAS_WIDTH / 2, CANVAS_HEIGHT - 36,
-      '💤 Click the bed to sleep',
+      '💤 Enter the farmhouse to sleep',
       {
         fontFamily: '"Courier New", Courier, monospace',
-        fontSize: '13px', color: '#aaddff',
+        fontSize: '16px', color: '#aaddff',
         stroke: '#000000', strokeThickness: 3,
       },
     );

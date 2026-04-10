@@ -4,6 +4,7 @@ import { InventorySystem, HOTBAR_SIZE } from '../systems/InventorySystem';
 import { EnergySystem } from '../systems/EnergySystem';
 import { EventBus } from '../utils/EventBus';
 import { C } from '../utils/ColorPalette';
+import { InventoryPanel } from './InventoryPanel';
 
 const SLOT_SIZE = 44;
 const SLOT_PAD = 4;
@@ -24,6 +25,9 @@ export class HotBar {
   private energyFill!: Phaser.GameObjects.Rectangle;
   private energyText!: Phaser.GameObjects.Text;
 
+  // Backpack panel
+  private inventoryPanel: InventoryPanel | null = null;
+
   private readonly startX: number;
   private readonly startY: number;
 
@@ -38,8 +42,18 @@ export class HotBar {
 
     this.buildSlots();
     this.buildEnergyBar();
+    this.buildBackpackButton();
     this.bindEvents();
     this.refresh();
+  }
+
+  isInventoryOpen(): boolean {
+    return this.inventoryPanel?.isVisible() ?? false;
+  }
+
+  closeInventory(): void {
+    this.inventoryPanel?.close();
+    this.inventoryPanel = null;
   }
 
   private buildSlots(): void {
@@ -74,7 +88,7 @@ export class HotBar {
         x + SLOT_SIZE / 2 - 4,
         y + SLOT_SIZE / 2 - 14,
         '',
-        { fontFamily: '"Courier New"', fontSize: '10px', color: '#ffffff', stroke: '#000', strokeThickness: 2 },
+        { fontFamily: '"Courier New"', fontSize: '14px', color: '#ffffff', stroke: '#000', strokeThickness: 2 },
       );
       qty.setOrigin(1, 1).setScrollFactor(0).setDepth(101);
       this.slotQtyTexts.push(qty);
@@ -83,7 +97,7 @@ export class HotBar {
       this.scene.add.text(
         x - SLOT_SIZE / 2 + 4, y - SLOT_SIZE / 2 + 2,
         String(i + 1),
-        { fontFamily: '"Courier New"', fontSize: '9px', color: '#888888' },
+        { fontFamily: '"Courier New"', fontSize: '12px', color: '#888888' },
       ).setScrollFactor(0).setDepth(101);
     }
   }
@@ -95,8 +109,8 @@ export class HotBar {
     const y = CANVAS_HEIGHT - barH / 2 - 14;
 
     // Label
-    this.scene.add.text(x - barW / 2 - 28, y - 6, 'ENE', {
-      fontFamily: '"Courier New"', fontSize: '10px', color: '#88ff88',
+    this.scene.add.text(x - barW / 2 - 34, y - 7, 'ENE', {
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#88ff88',
       stroke: '#000', strokeThickness: 2,
     }).setScrollFactor(0).setDepth(100);
 
@@ -106,6 +120,33 @@ export class HotBar {
 
     this.energyFill = this.scene.add.rectangle(x - barW / 2, y, barW, barH, 0x6abe30, 0.9);
     this.energyFill.setScrollFactor(0).setDepth(100).setOrigin(0, 0.5);
+  }
+
+  private buildBackpackButton(): void {
+    const bx = this.startX - SLOT_SIZE - 10;
+    const by = this.startY + SLOT_SIZE / 2;
+
+    const bg = this.scene.add.rectangle(bx, by, SLOT_SIZE, SLOT_SIZE, 0x37946e, 0.8);
+    bg.setScrollFactor(0).setDepth(99);
+    bg.setStrokeStyle(2, 0x888888, 1);
+    bg.setInteractive({ useHandCursor: true });
+
+    const txt = this.scene.add.text(bx, by, 'BAG', {
+      fontFamily: '"Courier New"', fontSize: '12px', color: '#ffffff',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+
+    bg.on('pointerover', () => { bg.setStrokeStyle(2, 0xffffff); txt.setColor('#fbf236'); });
+    bg.on('pointerout', () => { bg.setStrokeStyle(2, 0x888888); txt.setColor('#ffffff'); });
+    bg.on('pointerdown', () => {
+      if (this.inventoryPanel?.isVisible()) {
+        this.inventoryPanel.close();
+        this.inventoryPanel = null;
+      } else {
+        this.inventoryPanel = new InventoryPanel(this.scene, this.inventory);
+        this.inventoryPanel.open();
+      }
+    });
   }
 
   private readonly onInventoryChanged = () => this.refresh();
@@ -136,12 +177,18 @@ export class HotBar {
         qty.setText('');
       }
 
-      if (i === selected) {
+      if (selected >= 0 && i === selected) {
         this.selectionHighlight.setPosition(x, y);
+        this.selectionHighlight.setVisible(true);
         bg.setFillStyle(0x333333, 0.8);
       } else {
         bg.setFillStyle(0x000000, 0.6);
       }
+    }
+
+    // Hide highlight if nothing is selected
+    if (selected < 0) {
+      this.selectionHighlight.setVisible(false);
     }
 
     // Update energy bar
@@ -161,5 +208,7 @@ export class HotBar {
 
   destroy(): void {
     EventBus.off('inventory:changed', this.onInventoryChanged);
+    this.inventoryPanel?.close();
+    this.inventoryPanel = null;
   }
 }

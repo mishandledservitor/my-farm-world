@@ -210,6 +210,118 @@ export const ICON_PICKAXE: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
+// Wheat icon (12x12)
+export const ICON_WHEAT: number[][] = [
+  [_,_,_,_,_,C.GOLD,_,_,_,_,_,_],
+  [_,_,_,_,C.GOLD,C.YELLOW,C.GOLD,_,_,_,_,_],
+  [_,_,_,C.GOLD,C.YELLOW,C.GOLD,C.YELLOW,C.GOLD,_,_,_,_],
+  [_,_,_,C.GOLD,C.YELLOW,C.GOLD,C.YELLOW,C.GOLD,_,_,_,_],
+  [_,_,_,_,C.GOLD,C.YELLOW,C.GOLD,_,_,_,_,_],
+  [_,_,_,_,_,C.GOLD,_,_,_,_,_,_],
+  [_,_,_,_,_,C.LIGHT_BROWN,_,_,_,_,_,_],
+  [_,_,_,_,_,C.LIGHT_BROWN,_,_,_,_,_,_],
+  [_,_,_,_,_,C.LIGHT_BROWN,_,_,_,_,_,_],
+  [_,_,_,_,_,C.BROWN,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Pumpkin icon (12x12)
+export const ICON_PUMPKIN: number[][] = [
+  [_,_,_,_,_,C.DARK_GREEN,_,_,_,_,_,_],
+  [_,_,_,_,C.DARK_GREEN,C.PALE_GREEN,C.DARK_GREEN,_,_,_,_,_],
+  [_,_,_,C.ORANGE,C.ORANGE,C.ORANGE,C.ORANGE,C.ORANGE,_,_,_,_],
+  [_,_,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,_,_,_],
+  [_,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,_,_],
+  [_,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,_,_],
+  [_,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,_,_],
+  [_,_,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,C.LIGHT_BROWN,C.ORANGE,_,_,_],
+  [_,_,_,C.BROWN,C.ORANGE,C.BROWN,C.ORANGE,C.BROWN,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Strawberry icon (12x12)
+export const ICON_STRAWBERRY: number[][] = [
+  [_,_,_,_,_,C.DARK_GREEN,C.PALE_GREEN,_,_,_,_,_],
+  [_,_,_,_,C.PALE_GREEN,C.GREEN,C.PALE_GREEN,C.DARK_GREEN,_,_,_,_],
+  [_,_,_,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,_,_,_],
+  [_,_,C.RED,C.DARK_RED,C.RED,C.YELLOW,C.RED,C.DARK_RED,C.RED,_,_,_],
+  [_,_,C.RED,C.RED,C.YELLOW,C.RED,C.RED,C.RED,C.YELLOW,_,_,_],
+  [_,_,C.RED,C.YELLOW,C.RED,C.RED,C.YELLOW,C.RED,C.RED,_,_,_],
+  [_,_,_,C.RED,C.RED,C.YELLOW,C.RED,C.RED,_,_,_,_],
+  [_,_,_,_,C.DARK_RED,C.RED,C.DARK_RED,_,_,_,_,_],
+  [_,_,_,_,_,C.DARK_RED,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Jam jar icon (12x12)
+export const ICON_JAM: number[][] = [
+  [_,_,_,C.DARK_BROWN,C.DARK_BROWN,C.DARK_BROWN,C.DARK_BROWN,C.DARK_BROWN,_,_,_,_],
+  [_,_,C.DARK_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.DARK_BROWN,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.DARK_RED,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.PINK,C.RED,C.RED,C.RED,C.DARK_RED,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.RED,C.RED,C.PINK,C.RED,C.DARK_RED,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.DARK_RED,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.PINK,C.RED,C.RED,C.RED,C.DARK_RED,_,_,_],
+  [_,_,C.DARK_RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.DARK_RED,_,_,_],
+  [_,_,_,C.DARK_RED,C.DARK_RED,C.DARK_RED,C.DARK_RED,C.DARK_RED,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Cheese icon (12x12)
+export const ICON_CHEESE: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,C.GOLD,C.GOLD,C.GOLD,C.GOLD,C.GOLD,C.GOLD,C.GOLD,_,_,_],
+  [_,C.GOLD,C.YELLOW,C.YELLOW,C.GOLD,C.YELLOW,C.YELLOW,C.YELLOW,C.GOLD,C.GOLD,_,_],
+  [_,C.GOLD,C.YELLOW,C.GOLD,C.YELLOW,C.YELLOW,C.GOLD,C.YELLOW,C.YELLOW,C.GOLD,_,_],
+  [_,C.GOLD,C.YELLOW,C.YELLOW,C.YELLOW,C.YELLOW,C.YELLOW,C.YELLOW,C.GOLD,_,_,_],
+  [_,C.GOLD,C.YELLOW,C.GOLD,C.YELLOW,C.YELLOW,C.GOLD,C.YELLOW,C.GOLD,_,_,_],
+  [_,_,C.GOLD,C.YELLOW,C.YELLOW,C.GOLD,C.YELLOW,C.GOLD,_,_,_,_],
+  [_,_,_,C.GOLD,C.GOLD,C.GOLD,C.GOLD,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Fishing rod icon (12x12)
+export const ICON_FISHING_ROD: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,C.BROWN,_],
+  [_,_,_,_,_,_,_,_,_,C.BROWN,C.LIGHT_BROWN,_],
+  [_,_,_,_,_,_,_,_,C.BROWN,C.LIGHT_BROWN,_,_],
+  [_,_,_,_,_,_,_,C.BROWN,C.LIGHT_BROWN,_,_,_],
+  [_,_,_,_,_,_,C.BROWN,C.LIGHT_BROWN,_,_,_,_],
+  [_,_,_,_,_,C.LIGHT_BROWN,C.PALE_BLUE,_,_,_,_],
+  [_,_,_,_,C.LIGHT_BROWN,_,C.PALE_BLUE,_,_,_,_],
+  [_,_,_,C.DARK_BROWN,_,_,_,C.PALE_BLUE,_,_,_,_],
+  [_,_,C.DARK_BROWN,_,_,_,_,_,C.PALE_BLUE,_,_,_],
+  [_,_,_,_,_,_,_,_,C.LIGHT_GREY,_,_,_],
+  [_,_,_,_,_,_,_,_,_,C.LIGHT_GREY,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Fish icon (12x12)
+export const ICON_FISH: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,C.PALE_BLUE,C.PALE_BLUE,_,_,_,_,_],
+  [_,_,_,C.DARK_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.DARK_BLUE,_,_,_],
+  [_,C.DARK_BLUE,C.BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.DARK_BLUE,_,_],
+  [C.DARK_BLUE,C.BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.ALMOST_BLACK,C.PALE_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.BLUE,C.DARK_BLUE,_],
+  [_,C.DARK_BLUE,C.BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.DARK_BLUE,_,_],
+  [_,_,_,C.DARK_BLUE,C.PALE_BLUE,C.LIGHT_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,C.DARK_BLUE,_,_,_],
+  [_,_,_,_,_,C.PALE_BLUE,C.PALE_BLUE,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
 // Generic item icons mapped by itemId
 export const ITEM_ICONS: Record<string, number[][]> = {
   hoe:          ICON_HOE,
@@ -231,6 +343,13 @@ export const ITEM_ICONS: Record<string, number[][]> = {
   axe:          ICON_AXE,
   pickaxe:      ICON_PICKAXE,
   scythe:       ICON_HOE,   // fallback: hoe icon shape
+  wheat:        ICON_WHEAT,
+  pumpkin:      ICON_PUMPKIN,
+  strawberry:   ICON_STRAWBERRY,
+  jam:          ICON_JAM,
+  cheese:       ICON_CHEESE,
+  fishing_rod:  ICON_FISHING_ROD,
+  fish:         ICON_FISH,
   wood:         ICON_WOOD,
   berry:        ICON_BERRY,
   stone:        ICON_STONE,

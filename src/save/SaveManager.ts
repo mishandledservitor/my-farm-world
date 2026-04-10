@@ -38,6 +38,55 @@ export class SaveManager {
     return { day: save.day, coins: save.coins, scene: save.currentScene };
   }
 
+  /** Download the current save as a JSON file to the user's machine. */
+  static exportToFile(): void {
+    const save = this.load();
+    if (!save) return;
+    const json = JSON.stringify(save, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my-farm-world-day${save.day}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /** Import a save file from the user's machine. Returns a Promise that resolves when done. */
+  static importFromFile(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) { resolve(false); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result as string) as SaveFile;
+            if (typeof data.day !== 'number' || typeof data.coins !== 'number') {
+              console.warn('[SaveManager] Invalid save file format');
+              resolve(false);
+              return;
+            }
+            const migrated = SaveManager.migrate(data);
+            SaveManager.save(migrated);
+            resolve(true);
+          } catch (e) {
+            console.warn('[SaveManager] Failed to parse save file:', e);
+            resolve(false);
+          }
+        };
+        reader.onerror = () => resolve(false);
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+  }
+
   private static migrate(data: SaveFile): SaveFile {
     // Future migrations: if (data.version < 2) { ... data.version = 2; }
     // Fill any missing fields from the default

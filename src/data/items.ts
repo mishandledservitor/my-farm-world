@@ -38,6 +38,11 @@ export const ITEMS: Record<string, ItemDefinition> = {
     basePrice: 0, buyPrice: 150, stackable: false, maxStack: 1,
     description: 'Harvest crops quickly.',
   },
+  fishing_rod: {
+    id: 'fishing_rod', name: 'Fishing Rod', category: 'tool',
+    basePrice: 0, buyPrice: 100, stackable: false, maxStack: 1,
+    description: 'Cast into water to catch fish.',
+  },
 
   // ── Seeds ──────────────────────────────────────────────────────────────────
   turnip_seed: {
@@ -164,6 +169,11 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'berry', name: 'Wild Berry', category: 'resource',
     basePrice: 20, buyPrice: 0, stackable: true, maxStack: 99,
     description: 'Foraged from the forest.',
+  },
+  fish: {
+    id: 'fish', name: 'Fish', category: 'resource',
+    basePrice: 45, buyPrice: 0, stackable: true, maxStack: 99,
+    description: 'Caught from the pond with a fishing rod.',
   },
 };
 

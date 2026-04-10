@@ -37,10 +37,15 @@ export class InventorySystem {
   }
 
   selectSlot(index: number): void {
-    if (index >= 0 && index < INVENTORY_SIZE) {
+    if (index >= -1 && index < INVENTORY_SIZE) {
       this.selectedSlot = index;
       EventBus.emit('inventory:changed', {});
     }
+  }
+
+  deselectAll(): void {
+    this.selectedSlot = -1;
+    EventBus.emit('inventory:changed', {});
   }
 
   getSelectedIndex(): number {
@@ -99,6 +104,14 @@ export class InventorySystem {
 
   hasItem(itemId: string, quantity = 1): boolean {
     return this.countItem(itemId) >= quantity;
+  }
+
+  swapSlots(a: number, b: number): void {
+    if (a < 0 || a >= INVENTORY_SIZE || b < 0 || b >= INVENTORY_SIZE) return;
+    const temp = this.slots[a];
+    this.slots[a] = this.slots[b];
+    this.slots[b] = temp;
+    EventBus.emit('inventory:changed', {});
   }
 
   consumeSelectedItem(): void {

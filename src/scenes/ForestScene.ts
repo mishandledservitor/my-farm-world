@@ -164,15 +164,15 @@ export class ForestScene extends Phaser.Scene {
 
     // Scene header
     this.add.text(FCOLS / 2 * td, 4, 'WHISPERING FOREST', {
-      fontFamily: '"Courier New"', fontSize: '12px', color: '#99e550',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '18px', color: '#99e550',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(20);
 
     // South exit label
     const exitCenterX = ((EXIT_COL_MIN + EXIT_COL_MAX) / 2 + 0.5) * td;
     this.add.text(exitCenterX, (FROWS - 1) * td + td / 2, '↓ FARM', {
-      fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#fbf236',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0.5).setDepth(20);
   }
 
@@ -269,6 +269,7 @@ export class ForestScene extends Phaser.Scene {
 
     this.inventory = new InventorySystem();
     this.inventory.deserialize(save.inventory);
+    this.inventory.deselectAll();
 
     this.energySystem = new EnergySystem(save.energy);
 
@@ -388,7 +389,7 @@ export class ForestScene extends Phaser.Scene {
     const hexStr = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(
       tileX * td + td / 2, tileY * td, text,
-      { fontFamily: '"Courier New"', fontSize: '13px', color: hexStr, stroke: '#000', strokeThickness: 3 },
+      { fontFamily: '"Courier New"', fontSize: '18px', color: hexStr, stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 1).setDepth(50);
     this.tweens.add({
       targets: t, y: t.y - 32, alpha: 0,

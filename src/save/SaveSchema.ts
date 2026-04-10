@@ -1,7 +1,7 @@
 // Full serializable game state — everything needed to resume a session exactly.
 // Increment SAVE_VERSION when adding/removing fields; MigrationRegistry handles upgrades.
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface AppearanceSave {
   skin: number;
@@ -16,11 +16,12 @@ export interface SaveFile {
   coins: number;
   playerTileX: number;
   playerTileY: number;
-  currentScene: string;        // 'GameScene' | 'VillageScene' | 'ForestScene' | 'MineScene'
+  currentScene: string;        // 'GameScene' | 'VillageScene' | 'ForestScene' | 'MineScene' | 'FarmhouseScene'
   appearance: AppearanceSave;
   inventory: InventoryItemSave[];
   crops: CropSave[];
   tileOverrides: TileOverrideSave[];  // tiles changed from default (tilled, watered…)
+  tileUntendedDays: TileUntendedSave[]; // days since a tilled tile was last tended
   energy: number;
   tutorialStep: number;
   unlockedAreas: string[];     // ['forest', 'mine', …]
@@ -49,6 +50,12 @@ export interface TileOverrideSave {
   tileX: number;
   tileY: number;
   tileId: number;
+}
+
+export interface TileUntendedSave {
+  tileX: number;
+  tileY: number;
+  days: number;
 }
 
 export interface AnimalSave {
@@ -87,6 +94,7 @@ export function defaultSave(): SaveFile {
     inventory: [],
     crops: [],
     tileOverrides: [],
+    tileUntendedDays: [],
     energy: 100,
     tutorialStep: 0,
     unlockedAreas: [],

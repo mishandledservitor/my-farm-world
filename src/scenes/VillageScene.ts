@@ -157,15 +157,15 @@ export class VillageScene extends Phaser.Scene {
     // Rosa's Workshop (left side)
     this.add.image(3 * td + td, 3.5 * td, 'farmhouse').setScale(SCALE * 1.5).setDepth(10);
     this.add.text(3 * td + td, 2 * td - 4, "ROSA'S TOOLS", {
-      fontFamily: '"Courier New"', fontSize: '11px', color: '#ffffff',
-      stroke: '#000000', strokeThickness: 2, align: 'center',
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 3, align: 'center',
     }).setOrigin(0.5, 1).setDepth(20);
 
     // Mabel's Shop (right side)
     this.add.image(16 * td, 3.5 * td, 'farmhouse').setScale(SCALE * 1.5).setDepth(10);
     this.add.text(16 * td, 2 * td - 4, "MABEL'S SHOP", {
-      fontFamily: '"Courier New"', fontSize: '11px', color: '#ffffff',
-      stroke: '#000000', strokeThickness: 2, align: 'center',
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 3, align: 'center',
     }).setOrigin(0.5, 1).setDepth(20);
 
     // Entry gate label
@@ -175,8 +175,8 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5).setDepth(20);
 
     this.add.text(0.5 * td, 7 * td + td / 2 + 20, 'FARM', {
-      fontFamily: '"Courier New"', fontSize: '9px', color: '#cbdbfc',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '14px', color: '#cbdbfc',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0.5).setDepth(20);
 
     // Cave entrance (mine) at the east end of the road
@@ -184,8 +184,8 @@ export class VillageScene extends Phaser.Scene {
       .setScale(SCALE).setDepth(10);
     addHoverHighlight(caveImg);
     this.add.text(17 * td + td / 2, 6 * td - 4, 'THE MINE', {
-      fontFamily: '"Courier New"', fontSize: '10px', color: '#9badb7',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#9badb7',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(20);
 
     // Decorative trees
@@ -217,14 +217,14 @@ export class VillageScene extends Phaser.Scene {
 
       // Name label above
       this.add.text(wx, wy - td / 2 - 2, npc.name, {
-        fontFamily: '"Courier New"', fontSize: '11px', color: '#cbdbfc',
-        stroke: '#000000', strokeThickness: 2,
+        fontFamily: '"Courier New"', fontSize: '15px', color: '#cbdbfc',
+        stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5, 1).setDepth(21);
 
       // Bouncing interaction arrow
       const arrow = this.add.text(wx, wy - td / 2 + 4, '▼', {
-        fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236',
-        stroke: '#000000', strokeThickness: 2,
+        fontFamily: '"Courier New"', fontSize: '14px', color: '#fbf236',
+        stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(21);
 
       this.tweens.add({
@@ -339,6 +339,7 @@ export class VillageScene extends Phaser.Scene {
 
     this.inventory = new InventorySystem();
     this.inventory.deserialize(save.inventory);
+    this.inventory.deselectAll();
 
     this.energySystem = new EnergySystem(save.energy);
 
@@ -430,8 +431,8 @@ export class VillageScene extends Phaser.Scene {
   private showFloatingText(worldX: number, worldY: number, text: string, color: number): void {
     const hexStr = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(worldX, worldY, text, {
-      fontFamily: '"Courier New"', fontSize: '12px', color: hexStr,
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '18px', color: hexStr,
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(50);
     this.tweens.add({
       targets: t, y: t.y - 24, alpha: 0,

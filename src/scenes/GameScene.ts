@@ -74,7 +74,6 @@ export class GameScene extends Phaser.Scene {
 
   // World object refs
   private farmhouseSprite!: Phaser.GameObjects.Image;
-  private bedObject!:       Phaser.GameObjects.Image;
 
   private sleepingIn         = false;
   private transitioning      = false;
@@ -83,6 +82,9 @@ export class GameScene extends Phaser.Scene {
 
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
   private pets: PetEntity[] = [];
+
+  // Track how many days each tilled tile has been untended (no crop on it)
+  private tileUntendedDays: Map<string, number> = new Map();
 
   // Non-walkable barn/station tiles
   private readonly barnTiles = new Set<string>([
@@ -181,17 +183,18 @@ export class GameScene extends Phaser.Scene {
   private placeWorldObjects(): void {
     const td = TILE_SIZE * SCALE;
 
-    // Farmhouse at tile (12, 6)
+    // Farmhouse at tile (12, 6) — displayed bigger (3 tiles wide)
     this.farmhouseSprite = this.add.image(
-      12 * td + td / 2, 6 * td + td / 2, 'farmhouse',
-    ).setScale(SCALE).setDepth(10);
+      12 * td + td / 2, 6 * td + td, 'farmhouse',
+    ).setScale(SCALE * 2.5).setDepth(10).setInteractive({ useHandCursor: true });
+    this.farmhouseSprite.on('pointerdown', () => this.enterFarmhouse());
+    addHoverHighlight(this.farmhouseSprite);
 
-    // Bed — clickable to sleep
-    this.bedObject = this.add.image(
-      12 * td + td / 2, 8 * td + td / 2, 'bed',
-    ).setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
-    this.bedObject.on('pointerdown', () => this.triggerSleep());
-    addHoverHighlight(this.bedObject);
+    // Door label
+    this.add.text(
+      12 * td + td / 2, 8 * td + td / 2 + 4, 'ENTER HOUSE',
+      { fontFamily: '"Courier New"', fontSize: '14px', color: '#fbf236', stroke: '#000', strokeThickness: 3 },
+    ).setOrigin(0.5, 0).setDepth(20);
 
     // Trees
     const treePositions = [
@@ -208,13 +211,13 @@ export class GameScene extends Phaser.Scene {
     // Village gate sign
     this.add.text(
       28 * td + td / 2, 8 * td + td / 2, 'VILLAGE →',
-      { fontFamily: '"Courier New"', fontSize: '10px', color: '#fbf236', stroke: '#000', strokeThickness: 2 },
+      { fontFamily: '"Courier New"', fontSize: '16px', color: '#fbf236', stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 0.5).setDepth(20);
 
     // Forest gate sign (north end of path, cols 14-15, row 1)
     this.add.text(
       14 * td + td, 1 * td + td / 2, 'FOREST ↑',
-      { fontFamily: '"Courier New"', fontSize: '10px', color: '#99e550', stroke: '#000', strokeThickness: 2 },
+      { fontFamily: '"Courier New"', fontSize: '16px', color: '#99e550', stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 0.5).setDepth(20);
 
     // Fence posts around farm plot
@@ -240,8 +243,8 @@ export class GameScene extends Phaser.Scene {
     addHoverHighlight(barnImg);
 
     this.add.text(barnX, barnY - td, 'THE BARN', {
-      fontFamily: '"Courier New"', fontSize: '10px', color: '#cbdbfc',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '16px', color: '#cbdbfc',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(20);
 
     // Feed trough (tile 5, 11)
@@ -268,8 +271,8 @@ export class GameScene extends Phaser.Scene {
       addHoverHighlight(stImg as Phaser.GameObjects.Image);
 
       this.add.text(sx, sy + td / 2 + 2, s.label, {
-        fontFamily: '"Courier New"', fontSize: '9px', color: '#cbdbfc',
-        stroke: '#000000', strokeThickness: 2,
+        fontFamily: '"Courier New"', fontSize: '14px', color: '#cbdbfc',
+        stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5, 0).setDepth(20);
     }
   }
@@ -301,6 +304,7 @@ export class GameScene extends Phaser.Scene {
 
     this.inventory = new InventorySystem();
     this.inventory.deserialize(save?.inventory ?? []);
+    this.inventory.deselectAll();
 
     this.energySystem = new EnergySystem(save?.energy ?? 100);
 
@@ -323,6 +327,12 @@ export class GameScene extends Phaser.Scene {
       this.setTile(override.tileX, override.tileY, override.tileId as TileId);
     }
 
+    // Restore untended days tracker
+    this.tileUntendedDays.clear();
+    for (const u of (save?.tileUntendedDays ?? [])) {
+      this.tileUntendedDays.set(`${u.tileX},${u.tileY}`, u.days);
+    }
+
     // Rebuild saved crop sprites
     for (const crop of this.cropSystem.getAllCrops()) {
       this.spawnCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
@@ -337,7 +347,8 @@ export class GameScene extends Phaser.Scene {
     });
     this.interaction.isBlocked = () =>
       this.sleepingIn || this.transitioning ||
-      !!(this.animalPanel?.isVisible()) || !!(this.craftingPanel?.isVisible());
+      !!(this.animalPanel?.isVisible()) || !!(this.craftingPanel?.isVisible()) ||
+      this.hotBar.isInventoryOpen();
 
     this.timeSystem.start();
   }
@@ -363,6 +374,11 @@ export class GameScene extends Phaser.Scene {
       this.useTool(selectedId, tileX, tileY, tileId);
     } else if (item.category === 'seed') {
       this.plantSeed(selectedId, tileX, tileY, tileId);
+    }
+
+    // Fishing: click on water with fishing rod
+    if (selectedId === 'fishing_rod' && tileId === TILE.WATER) {
+      this.tryFishing(tileX, tileY);
     }
   }
 
@@ -463,19 +479,45 @@ export class GameScene extends Phaser.Scene {
   private setupCropListeners(): void {
     EventBus.on('time:new-day', ({ day }) => {
       const currentSeason = getSeasonFromDay(day);
-      const witheredKeys  = this.cropSystem.advanceDay(currentSeason);
-
-      // Destroy sprites for withered crops
-      for (const key of witheredKeys) {
-        const [x, y] = key.split(',').map(Number);
-        this.destroyCropSprite(x, y);
-        this.showFloatingText(x, y, 'Withered!', 0x888888);
-      }
+      // Advance crops without withering (pass undefined to skip season check)
+      this.cropSystem.advanceDay(undefined);
 
       for (const crop of this.cropSystem.getAllCrops()) {
         this.updateCropSprite(crop.tileX, crop.tileY, crop.cropType, crop.growthStage);
       }
       this.energySystem.fullRestore();
+
+      // Dry out watered tiles: watered_dirt → dirt
+      for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+          if (this.tileMap[row][col] === TILE.WATERED_DIRT) {
+            this.setTile(col, row, TILE.DIRT);
+          }
+        }
+      }
+
+      // Track untended tilled tiles and revert to grass after 3 days
+      const occupiedTiles = new Set(
+        this.cropSystem.getAllCrops().map(c => `${c.tileX},${c.tileY}`),
+      );
+
+      for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+          const key = `${col},${row}`;
+          if (this.tileMap[row][col] === TILE.DIRT && !occupiedTiles.has(key)) {
+            const days = (this.tileUntendedDays.get(key) ?? 0) + 1;
+            if (days >= 3) {
+              this.setTile(col, row, TILE.GRASS);
+              this.tileUntendedDays.delete(key);
+            } else {
+              this.tileUntendedDays.set(key, days);
+            }
+          } else {
+            // If tile has a crop or is no longer dirt, reset counter
+            this.tileUntendedDays.delete(key);
+          }
+        }
+      }
 
       // Dog bonus: alert when crops are harvest-ready
       const hasDog = this.pets.some(p => p.petType === 'dog');
@@ -536,13 +578,31 @@ export class GameScene extends Phaser.Scene {
     const hexStr = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(
       tileX * td + td / 2, tileY * td, text,
-      { fontFamily: '"Courier New"', fontSize: '13px', color: hexStr, stroke: '#000', strokeThickness: 3 },
+      { fontFamily: '"Courier New"', fontSize: '18px', color: hexStr, stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 1).setDepth(50);
     this.tweens.add({
       targets: t, y: t.y - 32, alpha: 0,
       duration: 900, ease: 'Quad.easeOut',
       onComplete: () => t.destroy(),
     });
+  }
+
+  // ── Fishing ────────────────────────────────────────────────────────────────
+
+  private tryFishing(tileX: number, tileY: number): void {
+    if (!this.energySystem.spend(2)) {
+      this.showFloatingText(tileX, tileY, 'Too tired!', 0xff4444);
+      return;
+    }
+    // Random chance: 70% fish, 30% nothing
+    const caught = Math.random() < 0.7;
+    if (caught) {
+      this.inventory.addItem('fish', 1);
+      this.showFloatingText(tileX, tileY, '+Fish!', 0x5fcde4);
+      this.hotBar.refresh();
+    } else {
+      this.showFloatingText(tileX, tileY, 'Nothing biting...', 0x9badb7);
+    }
   }
 
   // ── Sleep ──────────────────────────────────────────────────────────────────
@@ -577,6 +637,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private enterFarmhouse(): void {
+    if (this.transitioning || this.sleepingIn) return;
+    this.transitioning = true;
+    this.animalPanel?.close();
+    this.craftingPanel?.close();
+    this.movement.stop();
+    this.timeSystem.pause();
+    SaveManager.save(this.buildSave());
+
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.time.delayedCall(0, () => this.scene.start('FarmhouseScene'));
+    });
+  }
+
   // ── Save ───────────────────────────────────────────────────────────────────
 
   buildSave(day?: number): SaveFile {
@@ -591,6 +666,11 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+
+    const tileUntendedDays = Array.from(this.tileUntendedDays.entries()).map(([key, days]) => {
+      const [x, y] = key.split(',').map(Number);
+      return { tileX: x, tileY: y, days };
+    });
 
     return {
       ...base,
@@ -608,6 +688,7 @@ export class GameScene extends Phaser.Scene {
       processingQueues: this.processingSystem.serialize(),
       tutorialStep:     this.tutorialSystem.serialize(),
       tileOverrides,
+      tileUntendedDays,
     };
   }
 
@@ -616,8 +697,8 @@ export class GameScene extends Phaser.Scene {
   private isTileWalkable(x: number, y: number): boolean {
     if (x < 0 || y < 0 || x >= MAP_COLS || y >= MAP_ROWS) return false;
     if (BLOCKING_TILES.has(this.tileMap[y][x])) return false;
-    // Farmhouse area
-    if (x >= 11 && x <= 13 && y >= 4 && y <= 9) return false;
+    // Farmhouse area (wider for bigger house) — leave row 9 col 12 open as door approach
+    if (x >= 10 && x <= 14 && y >= 4 && y <= 8) return false;
     // Barn, trough, and station tiles
     if (this.barnTiles.has(`${x},${y}`)) return false;
     return true;

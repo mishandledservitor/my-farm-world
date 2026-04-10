@@ -53,19 +53,25 @@ export const SPRITE_CAVE_ENTRANCE: number[][] = [
   [_,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _],
 ];
 
+// Mine rock uses darker tones to stand out from the stone floor
+const MR_D = C.ALMOST_BLACK;  // darkest outline
+const MR_M = C.DARKER_GREY;   // mid rock body
+const MR_L = C.DARK_GREY;     // lighter rock face
+const MR_H = C.BROWN;         // highlight / ore specks
+
 export const SPRITE_MINE_ROCK: number[][] = [
-  [DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG],
-  [DG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, DG],
-  [DG, MG, LG, LG, MG, LG, LG, LG, LG, LG, MG, LG, LG, MG, MG, DG],
-  [DG, MG, LG, LG, DG, MG, LG, LG, MG, DG, LG, LG, LG, MG, MG, DG],  // crack
-  [DG, MG, LG, MG, DG, DG, MG, MG, DG, DG, MG, LG, LG, MG, MG, DG],  // crack
-  [DG, MG, MG, LG, LG, MG, MG, MG, MG, LG, LG, MG, MG, MG, MG, DG],
-  [DG, MG, LG, LG, LG, MG, DG, DG, MG, LG, LG, LG, LG, MG, MG, DG],  // crack
-  [DG, MG, MG, LG, LG, LG, LG, LG, LG, LG, LG, MG, MG, MG, MG, DG],
-  [DG, MG, LG, MG, LG, LG, MG, MG, LG, LG, MG, LG, MG, MG, MG, DG],
-  [DG, MG, LG, LG, MG, MG, MG, MG, MG, MG, LG, LG, LG, MG, MG, DG],
-  [DG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, MG, DG],
-  [DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, DG],
+  [MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D],
+  [MR_D, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_L, MR_M, MR_L, MR_L, MR_L, MR_L, MR_L, MR_M, MR_L, MR_L, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_H, MR_D, MR_M, MR_L, MR_L, MR_M, MR_D, MR_L, MR_L, MR_L, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_M, MR_D, MR_D, MR_M, MR_M, MR_D, MR_D, MR_M, MR_L, MR_H, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_M, MR_L, MR_L, MR_M, MR_M, MR_M, MR_M, MR_L, MR_L, MR_M, MR_M, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_L, MR_L, MR_M, MR_D, MR_D, MR_M, MR_L, MR_L, MR_L, MR_L, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_M, MR_L, MR_H, MR_L, MR_L, MR_L, MR_L, MR_L, MR_L, MR_M, MR_M, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_M, MR_L, MR_L, MR_M, MR_M, MR_L, MR_L, MR_M, MR_L, MR_M, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_L, MR_L, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_L, MR_H, MR_L, MR_M, MR_M, MR_D],
+  [MR_D, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_M, MR_D],
+  [MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D, MR_D],
   [_,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _],
   [_,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _],
   [_,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _],

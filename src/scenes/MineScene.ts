@@ -132,8 +132,8 @@ export class MineScene extends Phaser.Scene {
 
     // Floor label (top-centre)
     add(this.add.text(MCOLS / 2 * td, 4, `FLOOR  ${this.currentFloor} / ${MAX_FLOOR}`, {
-      fontFamily: '"Courier New"', fontSize: '12px', color: '#9badb7',
-      stroke: '#000000', strokeThickness: 2,
+      fontFamily: '"Courier New"', fontSize: '18px', color: '#9badb7',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(20));
 
     // Ladder UP
@@ -144,7 +144,7 @@ export class MineScene extends Phaser.Scene {
     add(this.add.text(
       LADDER_UP_COL * td + td / 2, (LADDER_UP_ROW + 1) * td,
       this.currentFloor === 1 ? '← EXIT' : '← UP',
-      { fontFamily: '"Courier New"', fontSize: '9px', color: '#9badb7', stroke: '#000', strokeThickness: 2 },
+      { fontFamily: '"Courier New"', fontSize: '14px', color: '#9badb7', stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 0).setDepth(10));
 
     // Ladder DOWN (only floors 1-4)
@@ -155,7 +155,7 @@ export class MineScene extends Phaser.Scene {
       ).setOrigin(0.5, 0.5).setDepth(10));
       add(this.add.text(
         LADDER_DOWN_COL * td + td / 2, (LADDER_DOWN_ROW + 1) * td, 'DOWN →',
-        { fontFamily: '"Courier New"', fontSize: '9px', color: '#9badb7', stroke: '#000', strokeThickness: 2 },
+        { fontFamily: '"Courier New"', fontSize: '14px', color: '#9badb7', stroke: '#000', strokeThickness: 3 },
       ).setOrigin(0.5, 0).setDepth(10));
     }
 
@@ -194,6 +194,7 @@ export class MineScene extends Phaser.Scene {
 
     this.inventory = new InventorySystem();
     this.inventory.deserialize(save.inventory);
+    this.inventory.deselectAll();
 
     this.energySystem = new EnergySystem(save.energy);
 
@@ -309,7 +310,7 @@ export class MineScene extends Phaser.Scene {
     const hexStr = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(
       tileX * td + td / 2, tileY * td, text,
-      { fontFamily: '"Courier New"', fontSize: '13px', color: hexStr, stroke: '#000', strokeThickness: 3 },
+      { fontFamily: '"Courier New"', fontSize: '18px', color: hexStr, stroke: '#000', strokeThickness: 3 },
     ).setOrigin(0.5, 1).setDepth(50);
     this.tweens.add({
       targets: t, y: t.y - 32, alpha: 0,
