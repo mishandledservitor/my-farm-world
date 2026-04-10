@@ -7,16 +7,21 @@ import {
   getSeasonFromDay, getDayOfSeason, seasonLabel, seasonColor,
 } from '../utils/SeasonUtils';
 
+import { WeatherType } from '../systems/WeatherSystem';
+
 interface UISceneData {
   timeSystem?: TimeSystem;
   hideSleepHint?: boolean;
+  weather?: WeatherType;
 }
 
 export class UIScene extends Phaser.Scene {
   private timeSystem: TimeSystem | null = null;
   private hideSleepHint = false;
+  private currentWeather: WeatherType = 'sunny';
 
   private dayText!: Phaser.GameObjects.Text;
+  private weatherText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private seasonText!: Phaser.GameObjects.Text;
   private coordText!: Phaser.GameObjects.Text;
@@ -31,6 +36,7 @@ export class UIScene extends Phaser.Scene {
   init(data: UISceneData): void {
     this.timeSystem = data.timeSystem ?? null;
     this.hideSleepHint = data.hideSleepHint ?? false;
+    this.currentWeather = data.weather ?? 'sunny';
   }
 
   create(): void {
@@ -61,6 +67,11 @@ export class UIScene extends Phaser.Scene {
       ...baseStyle, fontSize: '16px', color: seasonColor('spring'),
     });
     this.seasonText.setScrollFactor(0).setDepth(100);
+
+    this.weatherText = this.add.text(pad + 140, pad + 28, this.weatherLabel(this.currentWeather), {
+      ...baseStyle, fontSize: '16px', color: this.weatherColor(this.currentWeather),
+    });
+    this.weatherText.setScrollFactor(0).setDepth(100);
 
     this.timeText = this.add.text(pad + 4, pad + 50, '6:00 AM', {
       ...baseStyle, fontSize: '16px', color: '#ffff88',
@@ -123,6 +134,28 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('coins:changed', ({ coins }) => {
       this.coinText.setText(`$ ${coins}`);
     });
+
+    EventBus.on('weather:changed', ({ weather }) => {
+      this.currentWeather = weather;
+      this.weatherText.setText(this.weatherLabel(weather));
+      this.weatherText.setColor(this.weatherColor(weather));
+    });
+  }
+
+  private weatherLabel(w: WeatherType): string {
+    switch (w) {
+      case 'sunny':  return 'Sunny';
+      case 'cloudy': return 'Cloudy';
+      case 'rainy':  return 'Rain';
+    }
+  }
+
+  private weatherColor(w: WeatherType): string {
+    switch (w) {
+      case 'sunny':  return '#fbf236';
+      case 'cloudy': return '#9badb7';
+      case 'rainy':  return '#5fcde4';
+    }
   }
 
   update(): void {

@@ -23,6 +23,7 @@ import { getItem } from '../data/items';
 import { PetEntity } from '../entities/PetEntity';
 import { getSeasonFromDay, seasonLabel } from '../utils/SeasonUtils';
 import { addHoverHighlight } from '../utils/PixelArtUtils';
+import { WeatherSystem, WeatherType } from '../systems/WeatherSystem';
 
 // ── Tile type IDs ─────────────────────────────────────────────────────────────
 
@@ -83,6 +84,14 @@ export class GameScene extends Phaser.Scene {
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
   private pets: PetEntity[] = [];
 
+  // Weather
+  private weatherSystem!: WeatherSystem;
+  private rainEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+
+  // Sprinklers placed on the farm
+  private sprinklers: Set<string> = new Set(); // "x,y" keys
+  private sprinklerSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+
   // Track how many days each tilled tile has been untended (no crop on it)
   private tileUntendedDays: Map<string, number> = new Map();
 
@@ -90,7 +99,7 @@ export class GameScene extends Phaser.Scene {
   private readonly barnTiles = new Set<string>([
     '3,10','4,10','3,11','4,11','3,12','4,12',  // barn 2×3 footprint
     '5,11',                                      // trough
-    '3,13','5,13','7,13',                        // churn, mill, oven
+    '3,13','5,13','7,13','9,13',                   // churn, mill, oven, compost
   ]);
 
   constructor() {
@@ -122,7 +131,15 @@ export class GameScene extends Phaser.Scene {
 
     // Tutorial — created after all systems exist
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'GameScene');
-    this.events.once('shutdown', () => { this.tutorialPopup.destroy(); this.hotBar.destroy(); });
+    this.events.once('shutdown', () => {
+      this.tutorialPopup.destroy();
+      this.hotBar.destroy();
+      this.rainEmitter?.destroy();
+      this.rainEmitter = null;
+    });
+
+    // Initialize rain visuals if currently raining
+    this.updateRainEffect();
   }
 
   // ── Map setup ──────────────────────────────────────────────────────────────
@@ -255,9 +272,10 @@ export class GameScene extends Phaser.Scene {
 
     // ── Processing stations ────────────────────────────────────────────────────
     const stations: Array<{ key: string; type: string; col: number; row: number; label: string }> = [
-      { key: 'churn', type: 'churn', col: 3, row: 13, label: 'CHURN' },
-      { key: 'mill',  type: 'mill',  col: 5, row: 13, label: 'MILL'  },
-      { key: 'oven',  type: 'oven',  col: 7, row: 13, label: 'OVEN'  },
+      { key: 'churn',   type: 'churn',   col: 3, row: 13, label: 'CHURN'   },
+      { key: 'mill',    type: 'mill',    col: 5, row: 13, label: 'MILL'    },
+      { key: 'oven',    type: 'oven',    col: 7, row: 13, label: 'OVEN'    },
+      { key: 'compost', type: 'compost', col: 9, row: 13, label: 'COMPOST' },
     ];
 
     for (const s of stations) {
@@ -319,6 +337,11 @@ export class GameScene extends Phaser.Scene {
     this.processingSystem = new ProcessingSystem();
     this.processingSystem.deserialize(save?.processingQueues ?? []);
 
+    // Weather
+    this.weatherSystem = new WeatherSystem(
+      (save?.weather as WeatherType) || undefined,
+    );
+
     // Tutorial
     this.tutorialSystem = new TutorialSystem(save?.tutorialStep ?? 0);
 
@@ -331,6 +354,13 @@ export class GameScene extends Phaser.Scene {
     this.tileUntendedDays.clear();
     for (const u of (save?.tileUntendedDays ?? [])) {
       this.tileUntendedDays.set(`${u.tileX},${u.tileY}`, u.days);
+    }
+
+    // Restore sprinklers
+    this.sprinklers.clear();
+    for (const sp of (save?.sprinklers ?? [])) {
+      this.sprinklers.add(`${sp.tileX},${sp.tileY}`);
+      this.spawnSprinklerSprite(sp.tileX, sp.tileY);
     }
 
     // Rebuild saved crop sprites
@@ -374,6 +404,10 @@ export class GameScene extends Phaser.Scene {
       this.useTool(selectedId, tileX, tileY, tileId);
     } else if (item.category === 'seed') {
       this.plantSeed(selectedId, tileX, tileY, tileId);
+    } else if (selectedId === 'sprinkler') {
+      this.placeSprinkler(tileX, tileY, tileId);
+    } else if (selectedId === 'fertilizer') {
+      this.applyFertilizer(tileX, tileY);
     }
 
     // Fishing: click on water with fishing rod
@@ -487,11 +521,42 @@ export class GameScene extends Phaser.Scene {
       }
       this.energySystem.fullRestore();
 
+      // Roll new weather for the day
+      this.weatherSystem.advanceDay();
+      this.updateRainEffect();
+
       // Dry out watered tiles: watered_dirt → dirt
       for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
           if (this.tileMap[row][col] === TILE.WATERED_DIRT) {
             this.setTile(col, row, TILE.DIRT);
+          }
+        }
+      }
+
+      // Rain auto-waters all tilled soil and crops
+      if (this.weatherSystem.isRainy) {
+        for (let row = 0; row < MAP_ROWS; row++) {
+          for (let col = 0; col < MAP_COLS; col++) {
+            if (this.tileMap[row][col] === TILE.DIRT) {
+              this.setTile(col, row, TILE.WATERED_DIRT);
+              this.cropSystem.water(col, row);
+            }
+          }
+        }
+      }
+
+      // Sprinkler auto-watering: each sprinkler waters the 4 cardinal tiles
+      for (const key of this.sprinklers) {
+        const [sx, sy] = key.split(',').map(Number);
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          const nx = sx + dx;
+          const ny = sy + dy;
+          if (nx >= 0 && ny >= 0 && nx < MAP_COLS && ny < MAP_ROWS) {
+            if (this.tileMap[ny][nx] === TILE.DIRT) {
+              this.setTile(nx, ny, TILE.WATERED_DIRT);
+              this.cropSystem.water(nx, ny);
+            }
           }
         }
       }
@@ -605,6 +670,93 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── Sprinkler placement ────────────────────────────────────────────────
+
+  private placeSprinkler(tileX: number, tileY: number, tileId: number): void {
+    // Can only place on grass or dirt tiles
+    if (tileId !== TILE.GRASS && tileId !== TILE.DIRT && tileId !== TILE.WATERED_DIRT) {
+      this.showFloatingText(tileX, tileY, 'Can\'t place here', 0xff4444);
+      return;
+    }
+    const key = `${tileX},${tileY}`;
+    if (this.sprinklers.has(key)) {
+      this.showFloatingText(tileX, tileY, 'Already placed', 0xff8800);
+      return;
+    }
+    if (this.cropSystem.isOccupied(tileX, tileY)) {
+      this.showFloatingText(tileX, tileY, 'Tile occupied', 0xff4444);
+      return;
+    }
+
+    this.inventory.consumeSelectedItem();
+    this.sprinklers.add(key);
+    this.spawnSprinklerSprite(tileX, tileY);
+    this.showFloatingText(tileX, tileY, '+Sprinkler', 0x5fcde4);
+    this.hotBar.refresh();
+  }
+
+  private spawnSprinklerSprite(tileX: number, tileY: number): void {
+    const td = TILE_SIZE * SCALE;
+    const img = this.add.image(
+      tileX * td + td / 2, tileY * td + td / 2, 'sprinkler',
+    ).setScale(SCALE).setDepth(12);
+    this.sprinklerSprites.set(`${tileX},${tileY}`, img);
+  }
+
+  // ── Fertilizer ────────────────────────────────────────────────────────
+
+  private applyFertilizer(tileX: number, tileY: number): void {
+    const crop = this.cropSystem.getCrop(tileX, tileY);
+    if (!crop) {
+      this.showFloatingText(tileX, tileY, 'No crop here', 0xff8800);
+      return;
+    }
+    const boosted = this.cropSystem.boostGrowth(tileX, tileY);
+    if (!boosted) {
+      this.showFloatingText(tileX, tileY, 'Already mature', 0xff8800);
+      return;
+    }
+    this.inventory.consumeSelectedItem();
+    this.updateCropSprite(tileX, tileY, crop.cropType, crop.growthStage + 1);
+    this.showFloatingText(tileX, tileY, '+Growth!', 0x99e550);
+    this.hotBar.refresh();
+  }
+
+  // ── Rain effect ───────────────────────────────────────────────────────
+
+  private updateRainEffect(): void {
+    if (this.weatherSystem.isRainy) {
+      if (!this.rainEmitter) {
+        // Create a small blue pixel texture for rain if it doesn't exist
+        if (!this.textures.exists('rain-drop')) {
+          const g = this.make.graphics({ x: 0, y: 0, add: false });
+          g.fillStyle(0x5fcde4, 0.6);
+          g.fillRect(0, 0, 2, 6);
+          g.generateTexture('rain-drop', 2, 6);
+          g.destroy();
+        }
+        const particles = this.add.particles(0, 0, 'rain-drop', {
+          x: { min: 0, max: MAP_COLS * TILE_SIZE * SCALE },
+          y: -10,
+          lifespan: 800,
+          speedY: { min: 300, max: 500 },
+          speedX: { min: -20, max: -50 },
+          scale: { start: 1, end: 0.5 },
+          alpha: { start: 0.5, end: 0.1 },
+          frequency: 15,
+          quantity: 3,
+        });
+        particles.setDepth(45);
+        this.rainEmitter = particles;
+      }
+    } else {
+      if (this.rainEmitter) {
+        this.rainEmitter.destroy();
+        this.rainEmitter = null;
+      }
+    }
+  }
+
   // ── Sleep ──────────────────────────────────────────────────────────────────
 
   private setupSleepListeners(): void {
@@ -689,6 +841,11 @@ export class GameScene extends Phaser.Scene {
       tutorialStep:     this.tutorialSystem.serialize(),
       tileOverrides,
       tileUntendedDays,
+      weather: this.weatherSystem.serialize(),
+      sprinklers: Array.from(this.sprinklers).map(k => {
+        const [x, y] = k.split(',').map(Number);
+        return { tileX: x, tileY: y };
+      }),
     };
   }
 
@@ -701,6 +858,8 @@ export class GameScene extends Phaser.Scene {
     if (x >= 10 && x <= 14 && y >= 4 && y <= 8) return false;
     // Barn, trough, and station tiles
     if (this.barnTiles.has(`${x},${y}`)) return false;
+    // Sprinklers block movement
+    if (this.sprinklers.has(`${x},${y}`)) return false;
     return true;
   }
 
@@ -715,10 +874,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private launchUI(): void {
+    const uiData = { timeSystem: this.timeSystem, weather: this.weatherSystem.weather };
     if (!this.scene.isActive('UIScene')) {
-      this.scene.launch('UIScene', { timeSystem: this.timeSystem });
+      this.scene.launch('UIScene', uiData);
     } else {
-      this.scene.get('UIScene').scene.restart({ timeSystem: this.timeSystem });
+      this.scene.get('UIScene').scene.restart(uiData);
     }
   }
 

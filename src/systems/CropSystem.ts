@@ -86,6 +86,16 @@ export class CropSystem {
     return harvestId;
   }
 
+  /** Advance a crop by one growth stage (fertilizer boost). Returns true if successful. */
+  boostGrowth(tileX: number, tileY: number): boolean {
+    const crop = this.getCrop(tileX, tileY);
+    if (!crop) return false;
+    const def = CROPS[crop.cropType];
+    if (crop.growthStage >= def.stages) return false;
+    crop.growthStage++;
+    return true;
+  }
+
   // ── Called once per day (on 'new-day' event) ──────────────────────────────
 
   /**

@@ -1,7 +1,7 @@
 // Full serializable game state — everything needed to resume a session exactly.
 // Increment SAVE_VERSION when adding/removing fields; MigrationRegistry handles upgrades.
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface AppearanceSave {
   skin: number;
@@ -30,6 +30,8 @@ export interface SaveFile {
   processingQueues: ProcessingQueueSave[];
   lifetimeCoinsEarned: number;
   lifetimeItemsSold: number;
+  weather: string;             // 'sunny' | 'cloudy' | 'rainy'
+  sprinklers: SprinklerSave[];
 }
 
 export interface InventoryItemSave {
@@ -73,6 +75,11 @@ export interface PetSave {
   happiness: number;   // 0..100
 }
 
+export interface SprinklerSave {
+  tileX: number;
+  tileY: number;
+}
+
 export interface ProcessingQueueSave {
   stationType: string;       // 'churn' | 'mill' | 'oven'
   inputItemId: string;
@@ -105,5 +112,7 @@ export function defaultSave(): SaveFile {
     processingQueues: [],
     lifetimeCoinsEarned: 0,
     lifetimeItemsSold: 0,
+    weather: 'sunny',
+    sprinklers: [],
   };
 }

@@ -144,6 +144,20 @@ export const ITEMS: Record<string, ItemDefinition> = {
     description: 'A dairy cow. Bring her to the barn to produce milk each day.',
   },
 
+  // ── Placeable ──────────────────────────────────────────────────────────
+  sprinkler: {
+    id: 'sprinkler', name: 'Sprinkler', category: 'misc',
+    basePrice: 0, buyPrice: 200, stackable: true, maxStack: 10,
+    description: 'Place on the farm. Auto-waters 4 adjacent tiles each morning.',
+  },
+
+  // ── Crafted supplies ──────────────────────────────────────────────────
+  fertilizer: {
+    id: 'fertilizer', name: 'Fertilizer', category: 'misc',
+    basePrice: 30, buyPrice: 0, stackable: true, maxStack: 99,
+    description: 'Apply to a growing crop to advance it one growth stage.',
+  },
+
   // ── Resources ──────────────────────────────────────────────────────────────
   wood: {
     id: 'wood', name: 'Wood', category: 'resource',

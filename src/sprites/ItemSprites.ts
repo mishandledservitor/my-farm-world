@@ -322,6 +322,38 @@ export const ICON_FISH: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
+// Sprinkler icon (12x12)
+export const ICON_SPRINKLER: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,C.PALE_BLUE,_,C.PALE_BLUE,_,_,_,_,_],
+  [_,_,_,C.PALE_BLUE,_,C.PALE_BLUE,_,C.PALE_BLUE,_,_,_,_],
+  [_,_,_,_,C.PALE_BLUE,C.LIGHT_BLUE,C.PALE_BLUE,_,_,_,_,_],
+  [_,_,_,_,_,C.LIGHT_BLUE,_,_,_,_,_,_],
+  [_,_,_,_,DG,C.LIGHT_BLUE,DG,_,_,_,_,_],
+  [_,_,_,DG,MG,C.BLUE,MG,DG,_,_,_,_],
+  [_,_,_,DG,MG,C.BLUE,MG,DG,_,_,_,_],
+  [_,_,DG,MG,C.BLUE,C.LIGHT_BLUE,C.BLUE,MG,DG,_,_,_],
+  [_,_,_,DG,DG,DG,DG,DG,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
+// Fertilizer icon (12x12) — a small bag with green sprout
+export const ICON_FERTILIZER: number[][] = [
+  [_,_,_,_,_,C.PALE_GREEN,_,_,_,_,_,_],
+  [_,_,_,_,C.GREEN,C.PALE_GREEN,C.GREEN,_,_,_,_,_],
+  [_,_,_,_,_,C.DARK_GREEN,_,_,_,_,_,_],
+  [_,_,_,DB,DB,DB,DB,DB,DB,_,_,_],
+  [_,_,DB,B,B,B,B,B,B,DB,_,_],
+  [_,_,DB,B,C.DARK_GREEN,B,B,C.DARK_GREEN,B,DB,_,_],
+  [_,_,DB,B,B,B,B,B,B,DB,_,_],
+  [_,_,DB,B,B,C.DARK_GREEN,B,B,B,DB,_,_],
+  [_,_,DB,B,B,B,B,B,B,DB,_,_],
+  [_,_,_,DB,DB,DB,DB,DB,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
 // Generic item icons mapped by itemId
 export const ITEM_ICONS: Record<string, number[][]> = {
   hoe:          ICON_HOE,
@@ -355,4 +387,6 @@ export const ITEM_ICONS: Record<string, number[][]> = {
   stone:        ICON_STONE,
   iron_ore:     ICON_IRON_ORE,
   gold_ore:     ICON_GOLD_ORE,
+  sprinkler:    ICON_SPRINKLER,
+  fertilizer:   ICON_FERTILIZER,
 };

@@ -30,6 +30,7 @@ import {
 // Environment / unlockable areas
 import {
   SPRITE_BERRY_BUSH, SPRITE_CAVE_ENTRANCE, SPRITE_MINE_ROCK, SPRITE_STUMP,
+  SPRITE_SPRINKLER, SPRITE_COMPOST,
 } from '../sprites/EnvironmentSprites';
 
 // Pets
@@ -103,6 +104,8 @@ export class BootScene extends Phaser.Scene {
     registerPixelTexture(this, 'cave-entrance',   SPRITE_CAVE_ENTRANCE,   1);
     registerPixelTexture(this, 'mine-rock',       SPRITE_MINE_ROCK,       1);
     registerPixelTexture(this, 'stump',           SPRITE_STUMP,           1);
+    registerPixelTexture(this, 'sprinkler',      SPRITE_SPRINKLER,       1);
+    registerPixelTexture(this, 'compost',        SPRITE_COMPOST,         1);
 
     // ── Pets ──────────────────────────────────────────────────────────────────
     registerPixelTexture(this, 'pet-dog', SPRITE_DOG, 1);

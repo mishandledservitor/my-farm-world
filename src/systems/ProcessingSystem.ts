@@ -17,14 +17,21 @@ export interface ProcessingJob {
 
 export const RECIPES: ProcessingRecipe[] = [
   // Churn
-  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'butter', durationMinutes: 60  },
-  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'cheese', durationMinutes: 180 },
+  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'butter',     durationMinutes: 60  },
+  { stationType: 'churn', inputItemId: 'milk',       outputItemId: 'cheese',     durationMinutes: 180 },
   // Mill
-  { stationType: 'mill',  inputItemId: 'wheat',      outputItemId: 'flour',  durationMinutes: 30  },
+  { stationType: 'mill',  inputItemId: 'wheat',      outputItemId: 'flour',      durationMinutes: 30  },
   // Oven
-  { stationType: 'oven',  inputItemId: 'flour',      outputItemId: 'bread',  durationMinutes: 120 },
-  { stationType: 'oven',  inputItemId: 'strawberry', outputItemId: 'jam',    durationMinutes: 90  },
-  { stationType: 'oven',  inputItemId: 'berry',      outputItemId: 'jam',    durationMinutes: 90  },
+  { stationType: 'oven',  inputItemId: 'flour',      outputItemId: 'bread',      durationMinutes: 120 },
+  { stationType: 'oven',  inputItemId: 'strawberry', outputItemId: 'jam',        durationMinutes: 90  },
+  { stationType: 'oven',  inputItemId: 'berry',      outputItemId: 'jam',        durationMinutes: 90  },
+  // Compost bin
+  { stationType: 'compost', inputItemId: 'turnip',     outputItemId: 'fertilizer', durationMinutes: 60  },
+  { stationType: 'compost', inputItemId: 'carrot',     outputItemId: 'fertilizer', durationMinutes: 60  },
+  { stationType: 'compost', inputItemId: 'wheat',      outputItemId: 'fertilizer', durationMinutes: 60  },
+  { stationType: 'compost', inputItemId: 'pumpkin',    outputItemId: 'fertilizer', durationMinutes: 60  },
+  { stationType: 'compost', inputItemId: 'strawberry', outputItemId: 'fertilizer', durationMinutes: 60  },
+  { stationType: 'compost', inputItemId: 'berry',      outputItemId: 'fertilizer', durationMinutes: 45  },
 ];
 
 export class ProcessingSystem {
