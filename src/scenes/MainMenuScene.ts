@@ -97,7 +97,7 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // ── Version watermark ─────────────────────────────────────────────────────
-    this.add.text(W - 10, H - 10, 'v1.5.0', {
+    this.add.text(W - 10, H - 10, 'v1.6.0', {
       fontFamily: '"Courier New"',
       fontSize: '11px',
       color: '#595652',

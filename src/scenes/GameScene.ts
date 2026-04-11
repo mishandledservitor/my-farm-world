@@ -141,6 +141,7 @@ export class GameScene extends Phaser.Scene {
     this.placeWorldObjects();
     this.spawnPlayer(save);
     this.setupSystems(save);
+    this.renderBarnAnimals();
     this.spawnPets(save);
     this.setupCamera();
     this.setupSleepListeners();
@@ -289,9 +290,6 @@ export class GameScene extends Phaser.Scene {
       fontFamily: '"Courier New"', fontSize: '16px', color: '#cbdbfc',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(20);
-
-    // Render animals inside the barn (visible near the base of the barn sprite)
-    this.renderBarnAnimals();
 
     // Feed trough (tile 6, 11)
     const troughImg = this.add.image(6 * td + td / 2, 11 * td + td / 2, 'trough')
