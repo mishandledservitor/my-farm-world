@@ -50,11 +50,12 @@ src/
     MainMenuScene.ts         New Game / Continue; routes to correct saved scene
     CharacterCustomScene.ts  Skin/hair/shirt customisation; palette-swap
     GameScene.ts             Farm (30×24); crops, animals, weather, sprinklers, sleep, forest/village/farmhouse transitions
-    FarmhouseScene.ts        Farmhouse interior (8×6); bed for sleeping, exit door
+    FarmhouseScene.ts        Farmhouse interior (8×6); bed for sleeping, exit door;
+                              own AnimalSystem for sleep parity; calls advanceSaveDay on sleep
     VillageScene.ts          Village (20×15); NPCs, shop, mine entrance
     ForestScene.ts           Forest (20×15); trees, bushes, dog cutscene
     MineScene.ts             Mine (20×15, 5 floors); ore, ladders
-    UIScene.ts               Parallel HUD: clock, season, weather, coins, debug coords
+    UIScene.ts               Parallel HUD: clock, season, weather, coins, save button, debug coords
     SleepTransitionScene.ts  Fade + "Day N" / "Season Complete!" card
     DialogScene.ts           (reserved; dialog is currently inline in VillageScene)
   systems/
@@ -101,6 +102,7 @@ src/
     PixelArtUtils.ts         registerPixelTexture, registerSpriteSheet, applyPaletteSwap, addHoverHighlight
     PlayerTextureUtils.ts    refreshPlayerTextures (palette-swap), registerNPCTextures
     SeasonUtils.ts           getSeasonFromDay, getDayOfSeason, isLastDayOfSeason, seasonLabel, seasonColor
+    advanceSaveDay.ts        Pure day-advance on SaveFile data (crops, weather, tiles, sprinklers, untended tracking)
 tests/
   SeasonUtils.test.ts        12 tests
   CropSystem.test.ts         15 tests
@@ -227,7 +229,9 @@ Pets follow the player using simple directional movement (one step per 600 ms), 
 
 - **Format**: JSON stored under key `my-farm-world-save` in `localStorage`.
 - **Triggered**: On every sleep via `SleepTransitionScene`; on every scene transition.
-- **Schema version**: `SAVE_VERSION = 1`. `SaveManager.migrate()` fills missing fields from `defaultSave()` for forward compatibility.
+- **Schema version**: `SAVE_VERSION = 3`. `SaveManager.migrate()` fills missing fields from `defaultSave()` for forward compatibility. Migrations are registered in `MigrationRegistry`.
+- **Auto-save**: GameScene auto-saves at the end of `handleNewDay()` so state survives a reload mid-day.
+- **In-game export**: UIScene displays a `[ SAVE FILE ]` button; clicking it emits `save:flush` (so the active scene writes its latest state), then calls `SaveManager.exportToFile()`.
 - **Size**: ~5–15 KB depending on crop count and tile overrides.
 
 ### SaveFile fields (summary)
@@ -272,6 +276,7 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | `coins:changed` | `{ coins }` | ShopPanel |
 | `inventory:changed` | — | InventorySystem (all mutations) |
 | `crop:planted/watered/harvested/withered` | `{ tileX, tileY }` | CropSystem |
+| `save:flush` | — | UIScene save button (triggers current scene to write save before export) |
 
 **Important**: EventBus listeners registered in scene `create()` must be removed in the scene's `shutdown` handler using stored bound references. Anonymous closures cannot be removed by reference and will cause stale-listener crashes when scenes are swapped.
 
@@ -335,7 +340,7 @@ Seeds and tools are buy-only (no sell value). Cow costs 500g from Mabel. Sprinkl
 ## Git Branching Convention
 
 ```
-main              tagged stable releases (v0.1 … v1.4.0)
+main              tagged stable releases (v0.1 … v1.5.0)
 feature/vX.Y-name one branch per version, merged back via --no-ff merge commit
 ```
 

@@ -18,7 +18,7 @@ import { HotBar } from '../ui/HotBar';
 import { AnimalPanel } from '../ui/AnimalPanel';
 import { CraftingPanel } from '../ui/CraftingPanel';
 import { TutorialPopup } from '../ui/TutorialPopup';
-import { getCropBySeed } from '../data/crops';
+import { CROPS, getCropBySeed } from '../data/crops';
 import { getItem } from '../data/items';
 import { PetEntity } from '../entities/PetEntity';
 import { getSeasonFromDay, seasonLabel } from '../utils/SeasonUtils';
@@ -106,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit('time:new-day', { day });
   };
   private readonly onNewDay: (data: { day: number }) => void = ({ day }) => this.handleNewDay(day);
+  private readonly onSaveFlush = () => { SaveManager.save(this.buildSave()); };
 
   // Non-walkable barn/station tiles
   private readonly barnTiles = new Set<string>([
@@ -147,6 +148,7 @@ export class GameScene extends Phaser.Scene {
       EventBus.off('time:midnight', this.onMidnight);
       EventBus.off('sleep:end', this.onSleepEnd);
       EventBus.off('time:new-day', this.onNewDay);
+      EventBus.off('save:flush', this.onSaveFlush);
       this.tutorialPopup.destroy();
       this.hotBar.destroy();
       this.rainEmitter?.destroy();
@@ -614,6 +616,9 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+
+    // Auto-save so the fully advanced state survives a reload
+    SaveManager.save(this.buildSave());
   }
 
   // ── Crop sprites ───────────────────────────────────────────────────────────
@@ -622,20 +627,25 @@ export class GameScene extends Phaser.Scene {
 
   private spawnCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
     this.destroyCropSprite(tileX, tileY);
+    const def = CROPS[cropType];
+    const maxSprite = def ? def.stages - 1 : stage;
+    const clamped = Math.min(stage, maxSprite);
     const td  = TILE_SIZE * SCALE;
     const img = this.add.image(
-      tileX * td + td / 2, tileY * td + td / 2, `crop-${cropType}-${stage}`,
+      tileX * td + td / 2, tileY * td + td / 2, `crop-${cropType}-${clamped}`,
     ).setScale(SCALE).setDepth(15);
     this.cropSprites.set(this.cropSpriteKey(tileX, tileY), img);
   }
 
   private updateCropSprite(tileX: number, tileY: number, cropType: string, stage: number): void {
+    const def = CROPS[cropType];
+    const maxSprite = def ? def.stages - 1 : stage;
+    const clamped = Math.min(stage, maxSprite);
     const img = this.cropSprites.get(this.cropSpriteKey(tileX, tileY));
     if (img) {
-      const key = `crop-${cropType}-${stage}`;
-      if (this.textures.exists(key)) img.setTexture(key);
+      img.setTexture(`crop-${cropType}-${clamped}`);
     } else {
-      this.spawnCropSprite(tileX, tileY, cropType, stage);
+      this.spawnCropSprite(tileX, tileY, cropType, clamped);
     }
   }
 
@@ -779,6 +789,7 @@ export class GameScene extends Phaser.Scene {
   private setupSleepListeners(): void {
     EventBus.on('time:midnight', this.onMidnight);
     EventBus.on('sleep:end', this.onSleepEnd);
+    EventBus.on('save:flush', this.onSaveFlush);
   }
 
   triggerSleep(): void {

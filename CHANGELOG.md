@@ -5,6 +5,64 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.5.0] — 2026-04-11
+
+### Added
+- **In-game save file export** (`src/scenes/UIScene.ts`): `[ SAVE FILE ]` button in the bottom-right
+  of the game HUD. Clicking it flushes the current scene state to localStorage via a `save:flush`
+  EventBus event, then exports the save as a downloadable JSON file using `SaveManager.exportToFile()`.
+  Previously, save export was only available from the main menu.
+
+- **`advanceSaveDay()` utility** (`src/utils/advanceSaveDay.ts`): Pure function that advances a
+  `SaveFile` by one day — crops grow, weather rolls, watered tiles dry, rain/sprinkler auto-watering
+  fires, and untended dirt tiles revert to grass after 3 days. Operates entirely on serialised save
+  data so it can be called from any scene without Phaser dependencies. Used by FarmhouseScene to
+  ensure farmhouse sleep is fully equivalent to farm sleep.
+
+### Fixed
+- **Sleeping in the farmhouse did not advance game state** (`src/scenes/FarmhouseScene.ts`): When the
+  player slept in the farmhouse bed, the `onSleepEnd` handler only advanced the time system. It did
+  not restore energy, advance animals, grow crops, roll weather, dry/water tiles, or track untended
+  soil. This was because GameScene (which handles all those systems in its `handleNewDay` method)
+  is stopped while FarmhouseScene is active, so its `time:new-day` listener never fires.
+
+  **Fix:** FarmhouseScene now maintains its own `AnimalSystem` loaded from the save. The `onSleepEnd`
+  handler calls `energySystem.fullRestore()` and `animalSystem.advanceDay()`. The `buildSave(day)`
+  method calls `advanceSaveDay()` to advance crops, weather, tiles, and untended tracking in the
+  save data before writing to disk. This ensures the save written during the sleep transition
+  contains the fully-advanced new-day state.
+
+- **Chicken never laid eggs** (`src/scenes/FarmhouseScene.ts`): `AnimalSystem.advanceDay()` (which
+  sets `produceReady = true` for fed animals) was only called from `GameScene.onSleepEnd`. Since
+  GameScene is stopped when sleeping in the farmhouse, the chicken's produce was never flagged as
+  ready. Fixed as part of the farmhouse sleep parity fix above.
+
+- **Animal hunger, crop growth, and weather not persisting across reloads**
+  (`src/scenes/GameScene.ts`): `GameScene.buildSave(nextDay)` was called by `SleepTransitionScene`
+  *before* `onSleepEnd` and `handleNewDay` ran. The save written to disk contained pre-advance state
+  (old hunger, old crop stages, old weather). On any reload after sleeping, all overnight progress
+  was lost.
+
+  **Fix:** Added `SaveManager.save(this.buildSave())` at the end of `handleNewDay()` so the fully-
+  advanced state is always persisted immediately after the day advances.
+
+- **Missing crop sprites for harvest-ready crops** (`src/scenes/GameScene.ts`): Crops at their final
+  growth stage (e.g. `growthStage === 3` for turnip with `stages: 3`) requested texture key
+  `crop-turnip-3`, but only stages 0–2 have sprites. This caused Phaser's green-and-black missing
+  texture placeholder to render for all fully-grown crops.
+
+  **Fix:** `spawnCropSprite()` and `updateCropSprite()` now clamp the sprite stage to
+  `Math.min(stage, def.stages - 1)`, ensuring the last defined sprite is used for harvest-ready
+  crops.
+
+### Changed
+- `save:flush` event added to `EventBus` — listened by GameScene and FarmhouseScene to persist
+  current state to localStorage on demand (used by the new in-game save button).
+- FarmhouseScene now serialises its `AnimalSystem` state in `buildSave()` and `exitToFarm()`,
+  keeping animal data consistent across scene transitions.
+
+---
+
 ## [v1.4.0] — 2026-04-10
 
 ### Added

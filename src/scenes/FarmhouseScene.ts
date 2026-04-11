@@ -10,6 +10,8 @@ import { HotBar } from '../ui/HotBar';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
 import { EventBus } from '../utils/EventBus';
+import { AnimalSystem } from '../systems/AnimalSystem';
+import { advanceSaveDay } from '../utils/advanceSaveDay';
 import { addHoverHighlight } from '../utils/PixelArtUtils';
 
 // Interior is a small 8x6 room
@@ -23,14 +25,18 @@ export class FarmhouseScene extends Phaser.Scene {
   private timeSystem!: TimeSystem;
   private inventory!: InventorySystem;
   private energySystem!: EnergySystem;
+  private animalSystem!: AnimalSystem;
   private hotBar!: HotBar;
   private sleepingIn = false;
   private transitioning = false;
 
   // Bound EventBus listeners (stored so they can be removed on shutdown)
   private readonly onMidnight = () => { if (!this.sleepingIn) this.triggerSleep(); };
+  private readonly onSaveFlush = () => { SaveManager.save(this.buildSave()); };
   private readonly onSleepEnd = ({ day }: { day: number }) => {
     this.sleepingIn = false;
+    this.animalSystem.advanceDay();
+    this.energySystem.fullRestore();
     this.timeSystem.advanceDay();
     this.timeSystem.start();
     EventBus.emit('time:new-day', { day });
@@ -57,6 +63,7 @@ export class FarmhouseScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       EventBus.off('time:midnight', this.onMidnight);
       EventBus.off('sleep:end', this.onSleepEnd);
+      EventBus.off('save:flush', this.onSaveFlush);
       this.hotBar.destroy();
     });
   }
@@ -134,6 +141,8 @@ export class FarmhouseScene extends Phaser.Scene {
     this.inventory.selectSlot(-1);
 
     this.energySystem = new EnergySystem(s.energy);
+    this.animalSystem = new AnimalSystem();
+    this.animalSystem.deserialize(s.animals ?? []);
     this.hotBar = new HotBar(this, this.inventory, this.energySystem);
 
     this.interaction = new InteractionSystem(this, this.movement, (tileX, tileY) => {
@@ -191,6 +200,7 @@ export class FarmhouseScene extends Phaser.Scene {
   private setupSleepListeners(): void {
     EventBus.on('time:midnight', this.onMidnight);
     EventBus.on('sleep:end', this.onSleepEnd);
+    EventBus.on('save:flush', this.onSaveFlush);
   }
 
   private triggerSleep(): void {
@@ -208,14 +218,25 @@ export class FarmhouseScene extends Phaser.Scene {
 
   private buildSave(day?: number): SaveFile {
     const base = SaveManager.load() ?? defaultSave();
-    return {
+    const save: SaveFile = {
       ...base,
       day: day ?? this.timeSystem.day,
       totalMinutes: this.timeSystem.minutesElapsed,
       inventory: this.inventory.serialize(),
       energy: this.energySystem.serialize(),
+      animals: this.animalSystem.serialize(),
       currentScene: 'FarmhouseScene',
     };
+
+    if (day !== undefined) {
+      // Sleeping: advance all farm state for the new day before writing to disk.
+      // Advance animals in a temporary copy so the on-disk save is consistent.
+      const tempAnimals = new AnimalSystem();
+      tempAnimals.deserialize(save.animals);
+      tempAnimals.advanceDay();
+      return advanceSaveDay({ ...save, energy: 100, animals: tempAnimals.serialize() });
+    }
+    return save;
   }
 
   // ── Camera & UI ────────────────────────────────────────────────────────────

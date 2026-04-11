@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants/GameConfig';
 import { TimeSystem } from '../systems/TimeSystem';
 import { EventBus } from '../utils/EventBus';
+import { SaveManager } from '../save/SaveManager';
 import { C } from '../utils/ColorPalette';
 import {
   getSeasonFromDay, getDayOfSeason, seasonLabel, seasonColor,
@@ -93,8 +94,23 @@ export class UIScene extends Phaser.Scene {
     });
     this.coordText.setScrollFactor(0).setDepth(100);
 
+    // ── Save button (bottom-right) ──────────────────────────────────────────
+    const saveBtn = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 40, '[ SAVE FILE ]', {
+      ...baseStyle, fontSize: '13px', color: '#37946e',
+    });
+    saveBtn.setOrigin(1, 0).setScrollFactor(0).setDepth(100)
+      .setInteractive({ useHandCursor: true });
+    saveBtn.on('pointerover', () => saveBtn.setColor('#ffffff'));
+    saveBtn.on('pointerout',  () => saveBtn.setColor('#37946e'));
+    saveBtn.on('pointerdown', () => {
+      EventBus.emit('save:flush');
+      SaveManager.exportToFile();
+      saveBtn.setText('SAVED!');
+      this.time.delayedCall(1500, () => saveBtn.setText('[ SAVE FILE ]'));
+    });
+
     // ── Version (bottom-right) ───────────────────────────────────────────────
-    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 20, 'v1.4.0', {
+    this.versionText = this.add.text(CANVAS_WIDTH - pad, CANVAS_HEIGHT - pad - 20, 'v1.5.0', {
       ...baseStyle, fontSize: '13px', color: '#666666',
     });
     this.versionText.setOrigin(1, 0).setScrollFactor(0).setDepth(100);

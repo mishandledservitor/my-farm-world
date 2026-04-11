@@ -21,7 +21,7 @@ A peaceful farming life simulation built with Phaser 3 and TypeScript — inspir
 - **Farmhouse** — Enter your farmhouse to sleep; interior room with bed and exit.
 - **Seasons** — 30-day seasons cycling Spring → Summer → Fall → Winter with a season-complete card each cycle.
 - **Inventory** — 24-slot backpack panel to view and rearrange all items.
-- **Save / load** — Auto-saves on every sleep; export/import saves as JSON files.
+- **Save / load** — Auto-saves on every sleep; export/import saves as JSON files; in-game `[ SAVE FILE ]` button for quick export.
 - **Pastel art style** — Soft pastel colours, black outlines, and drop shadows on all sprites.
 - **Tutorial** — Step-by-step guidance on the first playthrough.
 - **Point-and-click only** — No keyboard required.
@@ -142,4 +142,4 @@ The game is a fully static site — no server required.
 
 ## Version
 
-Current release: **v1.4.0** — see [CHANGELOG.md](CHANGELOG.md) for full history.
+Current release: **v1.5.0** — see [CHANGELOG.md](CHANGELOG.md) for full history.
