@@ -756,7 +756,8 @@ export class GameScene extends Phaser.Scene {
       if (!this.rainEmitter) {
         // Create a small blue pixel texture for rain if it doesn't exist
         if (!this.textures.exists('rain-drop')) {
-          const g = this.make.graphics({ x: 0, y: 0, add: false });
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.setVisible(false);
           g.fillStyle(0x5fcde4, 0.6);
           g.fillRect(0, 0, 2, 6);
           g.generateTexture('rain-drop', 2, 6);

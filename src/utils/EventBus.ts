@@ -44,6 +44,9 @@ export type GameEventMap = {
   // Weather
   'weather:changed': { weather: 'sunny' | 'cloudy' | 'rainy' };
 
+  // Save
+  'save:flush':      Record<string, never>;
+
   // Tutorial
   'tutorial:step':   { step: number };
 };

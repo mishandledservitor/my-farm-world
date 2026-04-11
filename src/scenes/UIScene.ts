@@ -103,7 +103,7 @@ export class UIScene extends Phaser.Scene {
     saveBtn.on('pointerover', () => saveBtn.setColor('#ffffff'));
     saveBtn.on('pointerout',  () => saveBtn.setColor('#37946e'));
     saveBtn.on('pointerdown', () => {
-      EventBus.emit('save:flush');
+      EventBus.emit('save:flush', {} as Record<string, never>);
       SaveManager.exportToFile();
       saveBtn.setText('SAVED!');
       this.time.delayedCall(1500, () => saveBtn.setText('[ SAVE FILE ]'));
