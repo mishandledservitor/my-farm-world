@@ -3,6 +3,8 @@ import { ProcessingQueueSave } from '../save/SaveSchema';
 export interface ProcessingRecipe {
   stationType: string;
   inputItemId: string;
+  /** Optional second ingredient required by multi-input recipes (e.g. jam sandwich). */
+  extraInputItemId?: string;
   outputItemId: string;
   durationMinutes: number;
 }
@@ -10,6 +12,8 @@ export interface ProcessingRecipe {
 export interface ProcessingJob {
   stationType: string;
   inputItemId: string;
+  /** Set when the recipe that started this job had a second ingredient. */
+  extraInputItemId?: string;
   outputItemId: string;
   startTime: number;        // absolute game-minute when started
   durationMinutes: number;
@@ -25,6 +29,7 @@ export const RECIPES: ProcessingRecipe[] = [
   { stationType: 'oven',  inputItemId: 'flour',      outputItemId: 'bread',      durationMinutes: 120 },
   { stationType: 'oven',  inputItemId: 'strawberry', outputItemId: 'jam',        durationMinutes: 90  },
   { stationType: 'oven',  inputItemId: 'berry',      outputItemId: 'jam',        durationMinutes: 90  },
+  { stationType: 'oven',  inputItemId: 'bread',      extraInputItemId: 'jam',   outputItemId: 'jam_sandwich', durationMinutes: 30 },
   // Compost bin
   { stationType: 'compost', inputItemId: 'turnip',     outputItemId: 'fertilizer', durationMinutes: 60  },
   { stationType: 'compost', inputItemId: 'carrot',     outputItemId: 'fertilizer', durationMinutes: 60  },
@@ -62,9 +67,10 @@ export class ProcessingSystem {
     const job: ProcessingJob = {
       stationType,
       inputItemId,
-      outputItemId:    recipe.outputItemId,
-      startTime:       absoluteMinute,
-      durationMinutes: recipe.durationMinutes,
+      extraInputItemId: recipe.extraInputItemId,
+      outputItemId:     recipe.outputItemId,
+      startTime:        absoluteMinute,
+      durationMinutes:  recipe.durationMinutes,
     };
     this.jobs.set(stationType, job);
     return job;

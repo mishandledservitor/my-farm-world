@@ -47,14 +47,15 @@ export class AnimalPanel {
     const objs: Phaser.GameObjects.GameObject[] = [];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { objs.push(o); return o; };
 
-    // Dim background
-    add(this.scene.add.rectangle(
+    // Dim background — clicking here closes the panel
+    const dim = add(this.scene.add.rectangle(
       CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.65,
-    ).setScrollFactor(0).setDepth(179).setInteractive());
+    ).setScrollFactor(0).setDepth(179).setInteractive()) as Phaser.GameObjects.Rectangle;
+    dim.on('pointerdown', () => this.close());
 
-    // Panel
+    // Panel — interactive to swallow clicks so they don't bubble to the dim bg
     add(this.scene.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
-      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180));
+      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180).setInteractive());
 
     // Title
     add(this.scene.add.text(cx, py + 14, 'THE BARN', {
@@ -89,10 +90,21 @@ export class AnimalPanel {
           .setScale(2.5).setScrollFactor(0).setDepth(181));
       }
 
-      // Name & type
-      add(this.scene.add.text(px + 50, ay + 2, `${animal.name}  (${animal.animalType})`, {
+      // Name & type (clickable to rename)
+      const nameText = add(this.scene.add.text(px + 50, ay + 2, `${animal.name}  (${animal.animalType})`, {
         fontFamily: '"Courier New"', fontSize: '13px', color: '#ffffff',
-      }).setScrollFactor(0).setDepth(181));
+      }).setScrollFactor(0).setDepth(181)
+        .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+      nameText.on('pointerover', () => nameText.setColor('#fbf236'));
+      nameText.on('pointerout',  () => nameText.setColor('#ffffff'));
+      nameText.on('pointerdown', () => {
+        // eslint-disable-next-line no-alert
+        const newName = window.prompt(`Rename ${animal.name}:`, animal.name);
+        if (newName && newName.trim()) {
+          this.animalSystem.rename(capturedId, newName.trim().slice(0, 20));
+          this.rebuild();
+        }
+      });
 
       // Hunger
       add(this.scene.add.text(px + 50, ay + 20, `Hunger: ${hungerLabel}`, {
@@ -134,9 +146,25 @@ export class AnimalPanel {
       ay += 54;
     }
 
+    // ── Incubating eggs ──────────────────────────────────────────────────────
+    const incubating = this.animalSystem.getIncubating();
+    if (incubating.length > 0) {
+      add(this.scene.add.text(px + 20, ay + 4, 'Incubating eggs:', {
+        fontFamily: '"Courier New"', fontSize: '12px', color: '#9badb7',
+      }).setScrollFactor(0).setDepth(181));
+      ay += 20;
+      for (const egg of incubating) {
+        add(this.scene.add.text(px + 30, ay, `  ● Egg — hatches in ${egg.daysRemaining} day${egg.daysRemaining === 1 ? '' : 's'}`, {
+          fontFamily: '"Courier New"', fontSize: '12px', color: '#f7c35e',
+        }).setScrollFactor(0).setDepth(181));
+        ay += 16;
+      }
+      ay += 8;
+    }
+
     // ── Add Cow (if player carries a 'cow' item) ───────────────────────────────
     if (this.inventory.countItem('cow') > 0) {
-      const cowBtn = add(this.scene.add.text(px + 20, py + PH - 54, '[+ ADD COW TO BARN]', {
+      const cowBtn = add(this.scene.add.text(px + 20, py + PH - 76, '[+ ADD COW TO BARN]', {
         fontFamily: '"Courier New"', fontSize: '13px', color: '#f7c35e',
       }).setScrollFactor(0).setDepth(181)
         .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
@@ -145,6 +173,21 @@ export class AnimalPanel {
       cowBtn.on('pointerdown', () => {
         this.inventory.removeItem('cow', 1);
         this.animalSystem.addAnimal('cow', 'Bessie');
+        this.rebuild();
+      });
+    }
+
+    // ── Incubate Egg (if player carries an egg) ──────────────────────────────
+    if (this.inventory.countItem('egg') > 0) {
+      const eggBtn = add(this.scene.add.text(px + 20, py + PH - 54, '[+ INCUBATE EGG (3 days)]', {
+        fontFamily: '"Courier New"', fontSize: '13px', color: '#fbf236',
+      }).setScrollFactor(0).setDepth(181)
+        .setInteractive({ useHandCursor: true })) as Phaser.GameObjects.Text;
+      eggBtn.on('pointerover', () => eggBtn.setColor('#ffffff'));
+      eggBtn.on('pointerout',  () => eggBtn.setColor('#fbf236'));
+      eggBtn.on('pointerdown', () => {
+        this.inventory.removeItem('egg', 1);
+        this.animalSystem.startIncubation();
         this.rebuild();
       });
     }

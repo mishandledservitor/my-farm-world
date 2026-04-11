@@ -62,14 +62,15 @@ export class CraftingPanel {
 
     const now = this.getAbsoluteMinutes();
 
-    // Dim background
-    add(this.scene.add.rectangle(
+    // Dim background — clicking here closes the panel
+    const dim = add(this.scene.add.rectangle(
       CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.65,
-    ).setScrollFactor(0).setDepth(179).setInteractive());
+    ).setScrollFactor(0).setDepth(179).setInteractive()) as Phaser.GameObjects.Rectangle;
+    dim.on('pointerdown', () => this.close());
 
-    // Panel
+    // Panel — interactive to swallow clicks so they don't bubble to the dim bg
     add(this.scene.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
-      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180));
+      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180).setInteractive());
 
     // Title
     const title = STATION_TITLES[this.stationType] ?? this.stationType.toUpperCase();
@@ -151,31 +152,78 @@ export class CraftingPanel {
 
       for (const recipe of recipes) {
         const qty      = this.inventory.countItem(recipe.inputItemId);
-        const hasInput = qty > 0;
-        const col      = hasInput ? '#ffffff' : '#595652';
-        const btnCol   = hasInput ? '#99e550' : '#595652';
+        const extraQty = recipe.extraInputItemId
+          ? this.inventory.countItem(recipe.extraInputItemId)
+          : 1;
+        const hasAll   = qty > 0 && extraQty > 0;
+        const col      = hasAll ? '#ffffff' : '#595652';
+        const btnCol   = hasAll ? '#99e550' : '#595652';
 
         let inputName  = recipe.inputItemId;
         let outputName = recipe.outputItemId;
+        let extraName  = recipe.extraInputItemId ?? '';
         try { inputName  = getItem(recipe.inputItemId).name;  } catch { /* unknown item */ }
         try { outputName = getItem(recipe.outputItemId).name; } catch { /* unknown item */ }
+        if (recipe.extraInputItemId) {
+          try { extraName = getItem(recipe.extraInputItemId).name; } catch { /* unknown item */ }
+        }
 
-        add(this.scene.add.text(px + 20, cy,
-          `${inputName} ×1 (have: ${qty})  \u2192  ${outputName}  [${recipe.durationMinutes} min]`, {
-          fontFamily: '"Courier New"', fontSize: '13px', color: col,
-        }).setScrollFactor(0).setDepth(181));
+        // ── Render icons for the recipe ────────────────────────────────────────
+        const ICON_SIZE = 24;
+        let iconX = px + 20;
+        const iconY = cy + 10;
+
+        const addIcon = (itemId: string) => {
+          const tex = `icon-${itemId}`;
+          if (this.scene.textures.exists(tex)) {
+            const img = this.scene.add.image(iconX, iconY, tex)
+              .setOrigin(0, 0.5).setScale(2).setScrollFactor(0).setDepth(181);
+            add(img);
+          } else {
+            // fallback placeholder
+            add(this.scene.add.rectangle(
+              iconX + ICON_SIZE / 2, iconY, ICON_SIZE, ICON_SIZE, 0x333355,
+            ).setScrollFactor(0).setDepth(181));
+          }
+          iconX += ICON_SIZE + 6;
+        };
+
+        addIcon(recipe.inputItemId);
+        if (recipe.extraInputItemId) {
+          add(this.scene.add.text(iconX, iconY, '+', {
+            fontFamily: '"Courier New"', fontSize: '16px', color: '#9badb7',
+          }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(181));
+          iconX += 14;
+          addIcon(recipe.extraInputItemId);
+        }
+        add(this.scene.add.text(iconX, iconY, '\u2192', {
+          fontFamily: '"Courier New"', fontSize: '16px', color: '#9badb7',
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(181));
+        iconX += 20;
+        addIcon(recipe.outputItemId);
+        iconX += 8;
+
+        const label = recipe.extraInputItemId
+          ? `${inputName} (${qty}) + ${extraName} (${extraQty}) \u2192 ${outputName}  [${recipe.durationMinutes}m]`
+          : `${inputName} ×1 (have: ${qty})  \u2192  ${outputName}  [${recipe.durationMinutes}m]`;
+        add(this.scene.add.text(iconX, iconY, label, {
+          fontFamily: '"Courier New"', fontSize: '12px', color: col,
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(181));
 
         const capturedRecipe = recipe;
-        const startBtn = add(this.scene.add.text(px + PW - 90, cy, '[START]', {
+        const startBtn = add(this.scene.add.text(px + PW - 90, iconY, '[START]', {
           fontFamily: '"Courier New"', fontSize: '13px', color: btnCol,
-        }).setScrollFactor(0).setDepth(181)) as Phaser.GameObjects.Text;
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(181)) as Phaser.GameObjects.Text;
 
-        if (hasInput) {
+        if (hasAll) {
           startBtn.setInteractive({ useHandCursor: true });
           startBtn.on('pointerover', () => startBtn.setColor('#ffffff'));
           startBtn.on('pointerout',  () => startBtn.setColor(btnCol));
           startBtn.on('pointerdown', () => {
             this.inventory.removeItem(capturedRecipe.inputItemId, 1);
+            if (capturedRecipe.extraInputItemId) {
+              this.inventory.removeItem(capturedRecipe.extraInputItemId, 1);
+            }
             this.processingSystem.startJob(
               this.stationType,
               capturedRecipe.inputItemId,
@@ -186,7 +234,7 @@ export class CraftingPanel {
           });
         }
 
-        cy += 38;
+        cy += 42;
       }
     }
 

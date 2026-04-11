@@ -19,7 +19,7 @@ export const MINUTES_PER_DAY = 24 * 60;
 export const SLEEP_START_MINUTE = DAY_START_HOUR * 60; // 6:00 AM in minutes
 
 // Player config
-export const PLAYER_SPEED_TILES_PER_SECOND = 4; // tiles per second
+export const PLAYER_SPEED_TILES_PER_SECOND = 2.5; // tiles per second
 
 // Z-depth / depth ordering
 export const Z = {

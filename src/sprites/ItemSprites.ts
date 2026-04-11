@@ -150,6 +150,21 @@ export const ICON_BREAD: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
+export const ICON_JAM_SANDWICH: number[][] = [
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,C.BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.BROWN,_,_],
+  [_,C.BROWN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.BROWN,_,_],
+  [_,C.BROWN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.BROWN,_,_],
+  [_,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,_,_],
+  [_,C.RED,C.DARK_RED,C.RED,C.RED,C.DARK_RED,C.RED,C.RED,C.DARK_RED,C.RED,_,_],
+  [_,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,C.RED,_,_],
+  [_,C.BROWN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.BROWN,_,_],
+  [_,C.BROWN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.TAN,C.BROWN,_,_],
+  [_,C.BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.LIGHT_BROWN,C.BROWN,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_],
+];
+
 export const ICON_FLOUR: number[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,C.MID_GREY, C.MID_GREY, C.MID_GREY,_,_,_,_,_],
@@ -379,6 +394,7 @@ export const ITEM_ICONS: Record<string, number[][]> = {
   pumpkin:      ICON_PUMPKIN,
   strawberry:   ICON_STRAWBERRY,
   jam:          ICON_JAM,
+  jam_sandwich: ICON_JAM_SANDWICH,
   cheese:       ICON_CHEESE,
   fishing_rod:  ICON_FISHING_ROD,
   fish:         ICON_FISH,

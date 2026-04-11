@@ -12,6 +12,7 @@ import { TutorialPopup } from '../ui/TutorialPopup';
 import { SaveManager } from '../save/SaveManager';
 import { defaultSave, SaveFile } from '../save/SaveSchema';
 import { PetEntity } from '../entities/PetEntity';
+import { EventBus } from '../utils/EventBus';
 
 // ── Map constants ──────────────────────────────────────────────────────────────
 
@@ -105,6 +106,9 @@ export class ForestScene extends Phaser.Scene {
 
     this.tutorialPopup = new TutorialPopup(this, this.tutorialSystem, 'ForestScene');
     this.events.once('shutdown', () => { this.tutorialPopup.destroy(); this.hotBar.destroy(); });
+
+    // Sync coin display to current save
+    EventBus.emit('coins:changed', { coins: save.coins });
   }
 
   // ── Map ───────────────────────────────────────────────────────────────────
@@ -185,6 +189,8 @@ export class ForestScene extends Phaser.Scene {
 
   private spawnPets(save: SaveFile): void {
     for (const p of save.pets) {
+      // Cats stay home — only dogs follow the player to the forest.
+      if (p.petType === 'cat') continue;
       const pet = new PetEntity(
         this, p.id, p.petType, p.name, p.happiness,
         this.entryX + 1, this.entryY,
@@ -432,7 +438,13 @@ export class ForestScene extends Phaser.Scene {
     this.movement.update(delta);
 
     for (const pet of this.pets) {
-      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+      pet.update(
+        delta,
+        this.player.tileX,
+        this.player.tileY,
+        (x, y) => this.isTileWalkable(x, y),
+        (x, y, self) => this.pets.some(p => p !== self && p.tileX === x && p.tileY === y),
+      );
     }
 
     if (

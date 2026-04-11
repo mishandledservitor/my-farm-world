@@ -4,7 +4,7 @@ import { InventorySystem } from '../systems/InventorySystem';
 import { getItem } from '../data/items';
 import { EventBus } from '../utils/EventBus';
 
-const SELLABLE_CATS = new Set(['crop', 'processed', 'resource']);
+const SELLABLE_CATS = new Set(['crop', 'processed', 'resource', 'tool', 'misc']);
 
 type CoinsCallback = (newCoins: number, qtySold: number) => void;
 /** Optional per-item price override; defaults to item.basePrice if not provided. */
@@ -76,13 +76,15 @@ export class ShopPanel {
 
     const add = <T extends Phaser.GameObjects.GameObject>(obj: T) => { objs.push(obj); return obj; };
 
-    // Dim background
-    add(this.scene.add.rectangle(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.65)
-      .setScrollFactor(0).setDepth(179).setInteractive());
+    // Dim background — clicking here closes the panel
+    const dim = add(this.scene.add.rectangle(
+      CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0.65,
+    ).setScrollFactor(0).setDepth(179).setInteractive()) as Phaser.GameObjects.Rectangle;
+    dim.on('pointerdown', () => this.close());
 
-    // Panel
+    // Panel — interactive to swallow clicks so they don't bubble to the dim bg
     add(this.scene.add.rectangle(cx, py + PH / 2, PW, PH, 0x0d0d1a, 0.97)
-      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180));
+      .setStrokeStyle(2, 0x5b6ee1, 1).setScrollFactor(0).setDepth(180).setInteractive());
 
     // Title
     add(this.scene.add.text(cx, py + 14, this.title, {
@@ -124,6 +126,7 @@ export class ShopPanel {
       if (!slot.itemId || slot.quantity <= 0) continue;
       const item = getItem(slot.itemId);
       if (!SELLABLE_CATS.has(item.category)) continue;
+      if (item.basePrice <= 0) continue;
 
       hasSellable = true;
       const unitPrice = Math.floor(this.priceModFn(slot.itemId, item.basePrice) * this.sellMultiplier);

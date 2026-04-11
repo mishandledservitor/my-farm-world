@@ -15,32 +15,32 @@ export const ITEMS: Record<string, ItemDefinition> = {
   // ── Tools ──────────────────────────────────────────────────────────────────
   hoe: {
     id: 'hoe', name: 'Hoe', category: 'tool',
-    basePrice: 0, buyPrice: 0, stackable: false, maxStack: 1,
+    basePrice: 25, buyPrice: 0, stackable: false, maxStack: 1,
     description: 'Till the soil to prepare it for planting.',
   },
   watering_can: {
     id: 'watering_can', name: 'Watering Can', category: 'tool',
-    basePrice: 0, buyPrice: 0, stackable: false, maxStack: 1,
+    basePrice: 25, buyPrice: 0, stackable: false, maxStack: 1,
     description: 'Water your crops so they grow.',
   },
   axe: {
     id: 'axe', name: 'Axe', category: 'tool',
-    basePrice: 0, buyPrice: 200, stackable: false, maxStack: 1,
+    basePrice: 100, buyPrice: 200, stackable: false, maxStack: 1,
     description: 'Chop trees in the forest.',
   },
   pickaxe: {
     id: 'pickaxe', name: 'Pickaxe', category: 'tool',
-    basePrice: 0, buyPrice: 300, stackable: false, maxStack: 1,
+    basePrice: 150, buyPrice: 300, stackable: false, maxStack: 1,
     description: 'Mine ore in the mine.',
   },
   scythe: {
     id: 'scythe', name: 'Scythe', category: 'tool',
-    basePrice: 0, buyPrice: 150, stackable: false, maxStack: 1,
+    basePrice: 75, buyPrice: 150, stackable: false, maxStack: 1,
     description: 'Harvest crops quickly.',
   },
   fishing_rod: {
     id: 'fishing_rod', name: 'Fishing Rod', category: 'tool',
-    basePrice: 0, buyPrice: 100, stackable: false, maxStack: 1,
+    basePrice: 50, buyPrice: 100, stackable: false, maxStack: 1,
     description: 'Cast into water to catch fish.',
   },
 
@@ -131,6 +131,11 @@ export const ITEMS: Record<string, ItemDefinition> = {
     basePrice: 160, buyPrice: 0, stackable: true, maxStack: 99,
     description: 'Strawberry jam. Goes great with bread.',
   },
+  jam_sandwich: {
+    id: 'jam_sandwich', name: 'Jam Sandwich', category: 'processed',
+    basePrice: 400, buyPrice: 0, stackable: true, maxStack: 99,
+    description: 'A tasty sandwich of bread and jam. A hearty village favourite.',
+  },
   cheese: {
     id: 'cheese', name: 'Cheese', category: 'processed',
     basePrice: 130, buyPrice: 0, stackable: true, maxStack: 99,
@@ -147,8 +152,8 @@ export const ITEMS: Record<string, ItemDefinition> = {
   // ── Placeable ──────────────────────────────────────────────────────────
   sprinkler: {
     id: 'sprinkler', name: 'Sprinkler', category: 'misc',
-    basePrice: 0, buyPrice: 200, stackable: true, maxStack: 10,
-    description: 'Place on the farm. Auto-waters 4 adjacent tiles each morning.',
+    basePrice: 100, buyPrice: 200, stackable: true, maxStack: 10,
+    description: 'Place on the farm. Auto-waters a 5x5 area each morning. Click a placed sprinkler to pick it up.',
   },
 
   // ── Crafted supplies ──────────────────────────────────────────────────
