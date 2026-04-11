@@ -34,12 +34,12 @@ A slow-paced, Stardew Valley-inspired farming simulation game built entirely in 
 src/
   main.ts                    Phaser.Game config; all scenes registered here
   constants/
-    GameConfig.ts            TILE_SIZE=16, SCALE=3, canvas 960×720, time speeds
+    GameConfig.ts            TILE_SIZE=16, SCALE=3, canvas 960×720, time speeds, walk speed 2.5 t/s
   sprites/                   Pixel art arrays (number[][])
     TerrainSprites.ts        Grass, dirt, watered-dirt, stone, water, wood-floor
     UISprites.ts             Click-ring, slot, heart, bed, farmhouse, tree, fence
     CropSprites.ts           Per-crop, per-stage sprites
-    ItemSprites.ts           12×12 item icons + ITEM_ICONS lookup (all items including fish, sprinkler, fertilizer)
+    ItemSprites.ts           12×12 item icons + ITEM_ICONS lookup (all items including fish, sprinkler, fertilizer, jam sandwich)
     AnimalSprites.ts         Chicken, cow, barn, trough, churn, mill, oven
     EnvironmentSprites.ts    Berry bush, cave entrance, mine rock, stump, sprinkler, compost bin + resource icons
     PetSprites.ts            Dog (brown), cat (grey + green eyes)
@@ -49,9 +49,11 @@ src/
     BootScene.ts             Registers all textures; must succeed before any world scene
     MainMenuScene.ts         New Game / Continue; routes to correct saved scene
     CharacterCustomScene.ts  Skin/hair/shirt customisation; palette-swap
-    GameScene.ts             Farm (30×24); crops, animals, weather, sprinklers, sleep, forest/village/farmhouse transitions
-    FarmhouseScene.ts        Farmhouse interior (8×6); bed for sleeping, exit door;
-                              own AnimalSystem for sleep parity; calls advanceSaveDay on sleep
+    GameScene.ts             Farm (30×24); crops, animals, weather, sprinklers, sleep, forest/village/farmhouse transitions;
+                              visible barn animals; sprinkler pickup
+    FarmhouseScene.ts        Farmhouse interior (8×6); bed for sleeping, oven for cooking, exit door;
+                              own AnimalSystem + ProcessingSystem for sleep parity; calls advanceSaveDay on sleep;
+                              cats spawn here (dogs do not)
     VillageScene.ts          Village (20×15); NPCs, shop, mine entrance
     ForestScene.ts           Forest (20×15); trees, bushes, dog cutscene
     MineScene.ts             Mine (20×15, 5 floors); ore, ladders
@@ -65,8 +67,8 @@ src/
                               `isBlocked` callback prevents input when panels are open;
                               `scrollFactorX === 0` check blocks clicks on fixed UI elements
     CropSystem.ts            Plant/water/grow/harvest; season check; serialize/deserialize
-    AnimalSystem.ts          Hunger, produce, advanceDay; serialize/deserialize
-    ProcessingSystem.ts      Station jobs (churn/mill/oven); progress tracking
+    AnimalSystem.ts          Hunger, produce, advanceDay; egg incubation (3-day hatch); rename; serialize/deserialize
+    ProcessingSystem.ts      Station jobs (churn/mill/oven/compost); multi-input recipes (extraInputItemId); progress tracking
     EnergySystem.ts          100-point energy; spend/restore; serialize
     InventorySystem.ts       24-slot inventory + 8-slot hotbar; selectedItem; bounds-safe accessors
     WeatherSystem.ts         Daily weather roll (sunny/cloudy/rainy); weighted random; rain flag
@@ -74,7 +76,7 @@ src/
     UnlockSystem.ts          Forest (Day 7 + axe) and Mine (1000 coins) gate checks
   entities/
     Player.ts                Sprite + tile position; 4-direction walk/idle animations
-    PetEntity.ts             Follow logic (600 ms/step, teleport >5 tiles); click hearts
+    PetEntity.ts             Follow logic (600 ms/step, teleport >5 tiles); click hearts; pet-pet collision avoidance
   data/
     crops.ts                 CropDefinition: growthDays, stages, season, regrows
     items.ts                 ItemDefinition: basePrice, buyPrice, category, stackable
@@ -84,16 +86,16 @@ src/
     HotBar.ts                8-slot hotbar; selected-item highlight; energy bar; BAG button
     InventoryPanel.ts        24-slot grid panel; click-to-swap rearranging
     ShopPanel.ts             Sell column + buy column; sellMultiplier for cat bonus;
-                              container depth 200 for correct z-ordering
-    CraftingPanel.ts         Per-station recipe list or active-job progress bar;
-                              container depth 200
-    AnimalPanel.ts           Animal list with hunger bars; feed/collect;
-                              container depth 200
-    DialogBox.ts             Click-to-advance NPC dialog
+                              tools/misc now sellable; click-to-dismiss; container depth 200
+    CraftingPanel.ts         Per-station recipe list with item icons; multi-input recipe display;
+                              click-to-dismiss; container depth 200
+    AnimalPanel.ts           Animal list with hunger bars; feed/collect; rename on click;
+                              egg incubation UI; click-to-dismiss; container depth 200
+    DialogBox.ts             Full-screen click-blocker; click anywhere to advance/close NPC dialog
     TutorialPopup.ts         Arrow + text overlay; [SKIP] button; container depth 150;
                               interactive background blocks world clicks
   save/
-    SaveSchema.ts            Full SaveFile interface; defaultSave(); PetSave, CropSave, etc.
+    SaveSchema.ts            Full SaveFile interface; defaultSave(); PetSave, CropSave, IncubatingEggSave, etc.
     SaveManager.ts           localStorage save/load/delete; forward-migration stub
   utils/
     AStarPathfinder.ts       Manhattan heuristic A*; non-walkable targets use nearest neighbour
@@ -155,11 +157,11 @@ Wake up (6 AM)
   → Water crops (watering can, -1 energy per tile — skip if rainy)
   → Plant seeds (select seed in hotbar, click watered dirt, -3 energy)
   → Apply fertilizer to speed up growth
-  → Visit barn → feed animals, collect produce
-  → Process produce (churn/mill/oven/compost)
+  → Visit barn → feed animals, collect produce, incubate eggs
+  → Process produce (churn/mill/compost on farm; oven in farmhouse)
   → Fish at the pond (fishing rod, -2 energy)
   → Walk east → VillageScene → sell to Mabel → buy seeds/tools
-  → Return home → enter farmhouse
+  → Return home → enter farmhouse → cook at oven
   → Sleep (click bed or wait for midnight)
   → new-day advances crop stages, animal hunger, restores energy
 ```
@@ -189,13 +191,13 @@ Crops planted in the wrong season are blocked at planting time. Crops in the fie
 
 Weather is rolled each morning via `WeatherSystem.advanceDay()`. The current weather is displayed in the UIScene clock panel. Rain triggers a particle emitter overlay on the farm.
 
-**Morning water order**: (1) All watered tiles dry to dirt → (2) Rain waters all dirt tiles (if rainy) → (3) Sprinklers water their 4 cardinal neighbours → (4) Crops advance growth.
+**Morning water order**: (1) All watered tiles dry to dirt → (2) Rain waters all dirt tiles (if rainy) → (3) Sprinklers water their 5×5 area → (4) Crops advance growth.
 
 ---
 
 ## Sprinklers
 
-Buy from Rosa for 200g. Place on any grass tile on the farm. Each sprinkler automatically waters the 4 adjacent tiles (N/S/E/W) every morning, after the rain step. Sprinkler positions are persisted in `SaveFile.sprinklers` as `"x,y"` strings.
+Buy from Rosa for 200g (sell back for 100g). Place on any grass tile on the farm. Each sprinkler automatically waters all tiles in a 5×5 grid centred on itself every morning, after the rain step. Click a placed sprinkler to pick it back up into inventory. Sprinkler positions are persisted in `SaveFile.sprinklers` as `"x,y"` strings.
 
 ---
 
@@ -221,7 +223,7 @@ The compost bin is a processing station next to the oven. Compost any crop item 
 | Dog ("Buddy") | Forest cutscene on Day ≥ 10 | Alerts player when crops are harvest-ready each morning |
 | Cat ("Luna") | Mabel's offer after 50 total items sold | +10% sell price in all shop transactions |
 
-Pets follow the player using simple directional movement (one step per 600 ms), teleporting to the player's side if the distance exceeds 5 tiles.
+Dogs follow the player to all outdoor scenes (farm, forest, village, mine). Cats stay home and only appear inside the farmhouse. Pets use simple directional movement (one step per 600 ms), teleporting to the player's side if the distance exceeds 5 tiles. Multiple pets avoid stacking on the same tile via an `isOccupiedByPet` collision check.
 
 ---
 
@@ -258,6 +260,7 @@ Pets follow the player using simple directional movement (one step per 600 ms), 
 | `unlockedAreas` | `string[]` | Reserved for future area tracking |
 | `weather` | `string` | Current weather type (sunny/cloudy/rainy) |
 | `sprinklers` | `string[]` | Sprinkler positions as `"x,y"` strings |
+| `incubatingEggs` | `IncubatingEggSave[]` | Eggs being incubated (id, daysRemaining) |
 
 ---
 
@@ -304,7 +307,10 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Oven | Flour | Bread | 120 min |
 | Oven | Strawberry | Jam | 90 min |
 | Oven | Wild Berry | Jam | 90 min |
-| Compost | Any crop | Fertilizer | 120 min |
+| Oven | Bread + Jam | Jam Sandwich | 30 min |
+| Compost | Any crop | Fertilizer | 60 min |
+
+Multi-input recipes use `extraInputItemId` on the `ProcessingRecipe` interface. The `CraftingPanel` checks both ingredients are available and deducts both on `[START]`.
 
 ---
 
@@ -324,6 +330,7 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Flour | 55g | — | Mill |
 | Bread | 180g | — | Oven |
 | Jam | 160g | — | Oven |
+| Jam Sandwich | 400g | — | Oven (bread + jam) |
 | Stone | 10g | — | Mine floor 1 |
 | Iron Ore | 40g | — | Mine floor 2–5 |
 | Gold Ore | 120g | — | Mine floor 4–5 |
@@ -333,14 +340,14 @@ All cross-scene / cross-system communication goes through `EventBus` (typed pub/
 | Fish | 25g | — | Farm pond |
 | Fertilizer | — | — | Compost bin |
 
-Seeds and tools are buy-only (no sell value). Cow costs 500g from Mabel. Sprinkler costs 200g from Rosa. Fishing rod costs 150g from Rosa.
+Tools are now sellable: Hoe 25g, Watering Can 25g, Fishing Rod 50g, Scythe 75g, Axe 100g, Pickaxe 150g, Sprinkler 100g. Seeds are buy-only (no sell value). Cow costs 500g from Mabel. Sprinkler costs 200g from Rosa. Fishing rod costs 100g from Rosa.
 
 ---
 
 ## Git Branching Convention
 
 ```
-main              tagged stable releases (v0.1 … v1.5.0)
+main              tagged stable releases (v0.1 … v1.6.0)
 feature/vX.Y-name one branch per version, merged back via --no-ff merge commit
 ```
 

@@ -32,6 +32,12 @@ export interface SaveFile {
   lifetimeItemsSold: number;
   weather: string;             // 'sunny' | 'cloudy' | 'rainy'
   sprinklers: SprinklerSave[];
+  incubatingEggs: IncubatingEggSave[];
+}
+
+export interface IncubatingEggSave {
+  id: string;
+  daysRemaining: number;
 }
 
 export interface InventoryItemSave {
@@ -114,5 +120,6 @@ export function defaultSave(): SaveFile {
     lifetimeItemsSold: 0,
     weather: 'sunny',
     sprinklers: [],
+    incubatingEggs: [],
   };
 }

@@ -54,14 +54,16 @@ export function advanceSaveDay(save: SaveFile): SaveFile {
     }
   }
 
-  // 6. Sprinkler auto-watering: each sprinkler waters the 4 cardinal neighbours.
+  // 6. Sprinkler auto-watering: each sprinkler waters a 5x5 area centered on itself.
   for (const sp of save.sprinklers) {
-    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as [number, number][]) {
-      const nk = `${sp.tileX + dx},${sp.tileY + dy}`;
-      if (tileMap.get(nk) === TILE_DIRT) {
-        tileMap.set(nk, TILE_WATERED_DIRT);
-        const crop = cropMap.get(nk);
-        if (crop) crop.wateredToday = true;
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const nk = `${sp.tileX + dx},${sp.tileY + dy}`;
+        if (tileMap.get(nk) === TILE_DIRT) {
+          tileMap.set(nk, TILE_WATERED_DIRT);
+          const crop = cropMap.get(nk);
+          if (crop) crop.wateredToday = true;
+        }
       }
     }
   }

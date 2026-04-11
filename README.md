@@ -10,15 +10,15 @@ A peaceful farming life simulation built with Phaser 3 and TypeScript — inspir
 
 - **Farming** — Till, water, plant, and harvest crops across four seasons.
 - **Weather** — Random daily weather (sunny, cloudy, rainy). Rain auto-waters all tilled soil.
-- **Sprinklers** — Buy and place sprinklers to auto-water adjacent tiles every morning.
+- **Sprinklers** — Buy and place sprinklers to auto-water a 5×5 area every morning. Click to pick up.
 - **Compost & fertilizer** — Compost crops into fertilizer; apply to instantly advance crop growth.
-- **Animals** — A chicken in your barn from Day 1; buy a cow from Mabel for dairy production.
-- **Processing** — Churn butter and cheese, mill flour, bake bread, make jam in the village oven.
+- **Animals** — A chicken in your barn from Day 1; buy a cow from Mabel. Incubate eggs to hatch new chickens. Rename your animals.
+- **Processing** — Churn butter and cheese, mill flour, bake bread, make jam and jam sandwiches in the farmhouse oven.
 - **Village** — Sell goods to Mabel (with seasonal price bonuses), buy tools from Rosa, chat with Finn.
 - **Fishing** — Buy a fishing rod from Rosa and catch fish from the farm pond.
 - **Unlockable areas** — Whispering Forest (Day 7 + axe) and the Mine (1 000 lifetime coins earned).
-- **Pets** — Adopt Buddy the dog (Forest, Day 10) and Luna the cat (50 items sold). Both follow you and grant passive bonuses.
-- **Farmhouse** — Enter your farmhouse to sleep; interior room with bed and exit.
+- **Pets** — Adopt Buddy the dog (Forest, Day 10) and Luna the cat (50 items sold). Dogs follow you everywhere; cats stay home in the farmhouse. Both grant passive bonuses.
+- **Farmhouse** — Enter your farmhouse to sleep and cook at the oven; interior room with bed, oven, and exit.
 - **Seasons** — 30-day seasons cycling Spring → Summer → Fall → Winter with a season-complete card each cycle.
 - **Inventory** — 24-slot backpack panel to view and rearrange all items.
 - **Save / load** — Auto-saves on every sleep; export/import saves as JSON files; in-game `[ SAVE FILE ]` button for quick export.
@@ -124,10 +124,12 @@ See [DESIGN.md](DESIGN.md) for full architecture documentation and [CHANGELOG.md
 | Butter | Milk → Churn (1hr) | 100g |
 | Cheese | Milk → Churn (3hr) | 130g |
 | Flour | Wheat → Mill (30 min) | 55g |
-| Bread | Flour + Egg → Oven (2hr) | 180g |
+| Bread | Flour → Oven (2hr) | 180g |
 | Berry Jam | Strawberry or Berry → Oven (90 min) | 160g |
+| Jam Sandwich | Bread + Jam → Oven (30 min) | 400g |
 
 **Cat bonus:** +10% to all sell prices when Luna is your pet.
+**Tools are sellable:** Hoe 25g, Watering Can 25g, Fishing Rod 50g, Scythe 75g, Axe 100g, Pickaxe 150g, Sprinkler 100g.
 
 ---
 
@@ -142,4 +144,4 @@ The game is a fully static site — no server required.
 
 ## Version
 
-Current release: **v1.5.0** — see [CHANGELOG.md](CHANGELOG.md) for full history.
+Current release: **v1.6.0** — see [CHANGELOG.md](CHANGELOG.md) for full history.

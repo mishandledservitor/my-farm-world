@@ -33,9 +33,13 @@ export class DialogBox {
     const cx    = CANVAS_WIDTH / 2;
     const top   = CANVAS_HEIGHT - BOX_H - 72; // above the HotBar
 
-    // Invisible click-blocker covers the dialog area + a bit more
-    this.blocker = this.scene.add.rectangle(cx, top + BOX_H / 2, CANVAS_WIDTH, BOX_H + 20, 0x000000, 0);
+    // Invisible click-blocker covers the whole screen — clicking anywhere
+    // outside the dialog body advances / closes the dialog.
+    this.blocker = this.scene.add.rectangle(
+      CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH, CANVAS_HEIGHT, 0x000000, 0,
+    );
     this.blocker.setScrollFactor(0).setDepth(148).setInteractive();
+    this.blocker.on('pointerdown', () => this.advance());
 
     // Visible panel
     this.bg = this.scene.add.rectangle(cx, top + BOX_H / 2, BOX_W, BOX_H, 0x0d0d1a, 0.94);

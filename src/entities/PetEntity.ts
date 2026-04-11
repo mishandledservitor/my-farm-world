@@ -53,17 +53,22 @@ export class PetEntity {
     playerTileX: number,
     playerTileY: number,
     isWalkable: (x: number, y: number) => boolean,
+    isOccupiedByPet?: (x: number, y: number, self: PetEntity) => boolean,
   ): void {
     this.moveTimer += delta;
     if (this.moveTimer < MOVE_INTERVAL) return;
     this.moveTimer = 0;
 
+    const occupied = (x: number, y: number): boolean =>
+      isOccupiedByPet ? isOccupiedByPet(x, y, this) : false;
+
     const dx = playerTileX - this.tileX;
     const dy = playerTileY - this.tileY;
     const dist = Math.abs(dx) + Math.abs(dy);
 
-    // Already adjacent — no move needed
-    if (dist <= 1) return;
+    // Already adjacent — no move needed, but if another pet is on our tile
+    // we still try to shuffle aside.
+    if (dist <= 1 && !occupied(this.tileX, this.tileY)) return;
 
     // Teleport if too far away (player just scene-transitioned or is far off)
     if (dist > TELEPORT_DIST) {
@@ -75,7 +80,7 @@ export class PetEntity {
         [playerTileX, playerTileY + 1],
       ];
       for (const [cx, cy] of candidates) {
-        if (isWalkable(cx, cy)) {
+        if (isWalkable(cx, cy) && !occupied(cx, cy)) {
           this.tileX = cx;
           this.tileY = cy;
           this.syncPixelPosition();
@@ -90,15 +95,23 @@ export class PetEntity {
 
     if (Math.abs(dx) >= Math.abs(dy)) {
       stepCandidates.push([this.tileX + Math.sign(dx), this.tileY]);
-      stepCandidates.push([this.tileX, this.tileY + Math.sign(dy)]);
+      if (dy !== 0) stepCandidates.push([this.tileX, this.tileY + Math.sign(dy)]);
     } else {
       stepCandidates.push([this.tileX, this.tileY + Math.sign(dy)]);
-      stepCandidates.push([this.tileX + Math.sign(dx), this.tileY]);
+      if (dx !== 0) stepCandidates.push([this.tileX + Math.sign(dx), this.tileY]);
     }
+
+    // Fallback sideways shuffle if pets are stacked
+    stepCandidates.push([this.tileX + 1, this.tileY]);
+    stepCandidates.push([this.tileX - 1, this.tileY]);
+    stepCandidates.push([this.tileX, this.tileY + 1]);
+    stepCandidates.push([this.tileX, this.tileY - 1]);
 
     for (const [nx, ny] of stepCandidates) {
       // Don't step onto the player's tile
       if (nx === playerTileX && ny === playerTileY) continue;
+      // Don't step onto another pet's tile
+      if (occupied(nx, ny)) continue;
       if (isWalkable(nx, ny)) {
         this.tileX = nx;
         this.tileY = ny;

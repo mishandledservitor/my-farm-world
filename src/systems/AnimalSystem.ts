@@ -1,4 +1,4 @@
-import { AnimalSave } from '../save/SaveSchema';
+import { AnimalSave, IncubatingEggSave } from '../save/SaveSchema';
 
 export interface Animal {
   id: string;
@@ -8,13 +8,22 @@ export interface Animal {
   produceReady: boolean;
 }
 
+export interface IncubatingEgg {
+  id: string;
+  daysRemaining: number;
+}
+
 const PRODUCE_ITEM: Record<string, string> = {
   chicken: 'egg',
   cow:     'milk',
 };
 
+const INCUBATION_DAYS = 3;
+const CHICKEN_NAMES = ['Clucky', 'Henrietta', 'Peck', 'Noodle', 'Sunny', 'Omelette'];
+
 export class AnimalSystem {
   private animals: Animal[] = [];
+  private incubating: IncubatingEgg[] = [];
 
   getAll(): Animal[] { return this.animals; }
 
@@ -30,6 +39,11 @@ export class AnimalSystem {
   feed(animalId: string): void {
     const animal = this.getAnimal(animalId);
     if (animal) animal.hunger = 0;
+  }
+
+  rename(animalId: string, newName: string): void {
+    const animal = this.getAnimal(animalId);
+    if (animal) animal.name = newName;
   }
 
   feedAll(): void {
@@ -51,10 +65,37 @@ export class AnimalSystem {
       if (a.hunger < 60) a.produceReady = true;
       a.hunger = Math.min(100, a.hunger + 30);
     }
+    // Advance incubating eggs and hatch any that are ready.
+    const stillIncubating: IncubatingEgg[] = [];
+    for (const egg of this.incubating) {
+      const next = egg.daysRemaining - 1;
+      if (next <= 0) {
+        const name = CHICKEN_NAMES[Math.floor(Math.random() * CHICKEN_NAMES.length)];
+        this.addAnimal('chicken', name);
+      } else {
+        stillIncubating.push({ ...egg, daysRemaining: next });
+      }
+    }
+    this.incubating = stillIncubating;
+  }
+
+  // ── Incubation ────────────────────────────────────────────────────────────
+
+  getIncubating(): IncubatingEgg[] { return this.incubating; }
+
+  startIncubation(): void {
+    this.incubating.push({
+      id: `egg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      daysRemaining: INCUBATION_DAYS,
+    });
   }
 
   serialize(): AnimalSave[] {
     return this.animals.map(a => ({ ...a }));
+  }
+
+  serializeIncubating(): IncubatingEggSave[] {
+    return this.incubating.map(e => ({ ...e }));
   }
 
   deserialize(saves: AnimalSave[]): void {
@@ -65,5 +106,9 @@ export class AnimalSystem {
       hunger:       s.hunger,
       produceReady: s.produceReady,
     }));
+  }
+
+  deserializeIncubating(saves: IncubatingEggSave[] | undefined): void {
+    this.incubating = (saves ?? []).map(s => ({ id: s.id, daysRemaining: s.daysRemaining }));
   }
 }

@@ -249,6 +249,8 @@ export class VillageScene extends Phaser.Scene {
 
   private spawnPets(save: SaveFile): void {
     for (const p of save.pets) {
+      // Cats stay home — only dogs follow the player to town.
+      if (p.petType === 'cat') continue;
       const pet = new PetEntity(
         this, p.id, p.petType, p.name, p.happiness,
         this.entryX + 1, this.entryY,
@@ -563,7 +565,13 @@ export class VillageScene extends Phaser.Scene {
     this.movement.update(delta);
 
     for (const pet of this.pets) {
-      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+      pet.update(
+        delta,
+        this.player.tileX,
+        this.player.tileY,
+        (x, y) => this.isTileWalkable(x, y),
+        (x, y, self) => this.pets.some(p => p !== self && p.tileX === x && p.tileY === y),
+      );
     }
 
     // Detect player reaching the farm gate

@@ -5,6 +5,83 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.6.0] — 2026-04-11
+
+### Added
+- **Egg incubation** (`src/systems/AnimalSystem.ts`, `src/ui/AnimalPanel.ts`): Place an egg in the
+  barn to incubate it. After 3 days it hatches into a new chicken with a random name. The
+  `[+ INCUBATE EGG (3 days)]` button appears in the AnimalPanel when the player has eggs in
+  inventory. Incubating eggs are persisted via `SaveFile.incubatingEggs` and displayed in the barn
+  panel with a countdown. The `IncubatingEggSave` interface and `incubatingEggs` field were added to
+  `SaveSchema.ts`.
+
+- **Jam Sandwich** (`src/data/items.ts`, `src/systems/ProcessingSystem.ts`): New multi-input recipe
+  — Bread + Jam → Jam Sandwich (oven, 30 min, sells for 400g). The `ProcessingSystem` now supports
+  `extraInputItemId` on recipes for two-ingredient crafting. The `CraftingPanel` renders both input
+  icons with a `+` separator and checks that both ingredients are available before enabling
+  `[START]`.
+
+- **Animal renaming** (`src/systems/AnimalSystem.ts`, `src/ui/AnimalPanel.ts`): Click an animal's
+  name in the barn panel to rename it via a browser prompt (max 20 characters).
+
+- **Farmhouse oven** (`src/scenes/FarmhouseScene.ts`): The oven has been moved from the outdoor farm
+  into the farmhouse interior (top-left corner). Clicking it opens the crafting panel for oven
+  recipes. The farmhouse scene now loads `ProcessingSystem` state from the save and persists it on
+  exit and sleep.
+
+- **Visible barn animals** (`src/scenes/GameScene.ts`): Animals are now rendered as small sprites
+  near the base of the barn on the farm map. The display refreshes after each new day and when the
+  animal panel is closed.
+
+- **Jam Sandwich icon** (`src/sprites/ItemSprites.ts`): New 12×12 pixel-art icon showing bread
+  slices with a red jam filling.
+
+### Changed
+- **Sprinklers cover a 5×5 area** (`src/scenes/GameScene.ts`, `src/utils/advanceSaveDay.ts`):
+  Sprinklers now water all tiles in a 5×5 grid centred on themselves each morning, up from the
+  previous 4 cardinal-adjacent tiles. Both the live game and `advanceSaveDay()` were updated.
+
+- **Sprinklers are retrievable** (`src/scenes/GameScene.ts`): Clicking a placed sprinkler picks it
+  back up into the player's inventory with a `+Sprinkler` floating text confirmation.
+
+- **Tools and sprinklers are now sellable** (`src/data/items.ts`, `src/ui/ShopPanel.ts`): All tools
+  now have sell prices — hoe (25g), watering can (25g), axe (100g), pickaxe (150g), scythe (75g),
+  fishing rod (50g), sprinkler (100g). The shop's sellable-category filter was expanded to include
+  `tool` and `misc` items, with a guard against zero-price items.
+
+- **Player walk speed reduced** (`src/constants/GameConfig.ts`): `PLAYER_SPEED_TILES_PER_SECOND`
+  lowered from 4 to 2.5 for a more relaxed pace.
+
+- **Barn enlarged** (`src/scenes/GameScene.ts`): Barn footprint expanded from 2×3 (cols 3–4,
+  rows 10–12) to 4×3 (cols 2–5, rows 9–11) with a 2.5× visual scale. Feed trough moved to tile
+  (6, 11). Oven removed from outdoor processing stations.
+
+- **Cats stay home** (`src/scenes/ForestScene.ts`, `src/scenes/VillageScene.ts`,
+  `src/scenes/MineScene.ts`, `src/scenes/FarmhouseScene.ts`): Only dogs follow the player to the
+  forest, village, and mine. Cats now appear exclusively in the farmhouse interior.
+
+- **Pet collision avoidance** (`src/entities/PetEntity.ts`): Pets no longer stack on the same tile.
+  An `isOccupiedByPet` callback was added to `PetEntity.update()`. Pets check for other pets when
+  choosing a movement target or teleport destination, and shuffle sideways when stacked.
+
+- **Click-to-dismiss on all panels** (`src/ui/ShopPanel.ts`, `src/ui/CraftingPanel.ts`,
+  `src/ui/InventoryPanel.ts`, `src/ui/AnimalPanel.ts`): Clicking the dim background behind any
+  panel now closes it. The panel body is set interactive to prevent click-through to the dimmer.
+
+- **Dialog click-anywhere to advance** (`src/ui/DialogBox.ts`): The NPC dialog click-blocker is now
+  full-screen instead of just covering the dialog area. Clicking anywhere advances or closes the
+  dialog.
+
+- **Coin display synced across scenes** (`src/scenes/GameScene.ts`, `src/scenes/FarmhouseScene.ts`,
+  `src/scenes/ForestScene.ts`, `src/scenes/MineScene.ts`, `src/scenes/UIScene.ts`): All world
+  scenes now emit `coins:changed` on creation so the HUD coin counter stays accurate after scene
+  transitions. UIScene also initialises the coin text from the save file.
+
+- **Crafting panel shows item icons** (`src/ui/CraftingPanel.ts`): Each recipe row now displays
+  input and output item icons alongside the text label instead of text-only.
+
+---
+
 ## [v1.5.0] — 2026-04-11
 
 ### Added

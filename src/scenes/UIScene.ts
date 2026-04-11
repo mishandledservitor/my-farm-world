@@ -83,7 +83,8 @@ export class UIScene extends Phaser.Scene {
     const coinBg = this.add.rectangle(CANVAS_WIDTH - 80, pad + 18, 150, 38, 0x000000, 0.55);
     coinBg.setScrollFactor(0).setDepth(99);
 
-    this.coinText = this.add.text(CANVAS_WIDTH - 148, pad + 6, '$ 50', {
+    const initialCoins = SaveManager.load()?.coins ?? 50;
+    this.coinText = this.add.text(CANVAS_WIDTH - 148, pad + 6, `$ ${initialCoins}`, {
       ...baseStyle, fontSize: '20px', color: '#f7c35e',
     });
     this.coinText.setScrollFactor(0).setDepth(100);

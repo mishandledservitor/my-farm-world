@@ -110,10 +110,16 @@ export class GameScene extends Phaser.Scene {
 
   // Non-walkable barn/station tiles
   private readonly barnTiles = new Set<string>([
-    '3,10','4,10','3,11','4,11','3,12','4,12',  // barn 2×3 footprint
-    '5,11',                                      // trough
-    '3,13','5,13','7,13','9,13',                   // churn, mill, oven, compost
+    // Barn 4×3 footprint cols 2-5 rows 9-11 (bigger barn)
+    '2,9','3,9','4,9','5,9',
+    '2,10','3,10','4,10','5,10',
+    '2,11','3,11','4,11','5,11',
+    '6,11',                                      // trough
+    '3,13','5,13','9,13',                          // churn, mill, compost (oven moved into house)
   ]);
+
+  // Animal sprites displayed roaming in the visible-open area of the barn
+  private animalSprites: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super({ key: 'GameScene' });
@@ -157,6 +163,9 @@ export class GameScene extends Phaser.Scene {
 
     // Initialize rain visuals if currently raining
     this.updateRainEffect();
+
+    // Sync coin display
+    EventBus.emit('coins:changed', { coins: this.coins });
   }
 
   // ── Map setup ──────────────────────────────────────────────────────────────
@@ -268,30 +277,32 @@ export class GameScene extends Phaser.Scene {
       this.add.image(col * td + td / 2, row * td + td / 2, 'fence-post').setScale(SCALE).setDepth(8);
     });
 
-    // ── Barn (tile 4, 11 visual center, 2×3 footprint cols 3-4 rows 10-12) ────
-    const barnX = 4 * td + td / 2;
-    const barnY = 11 * td + td / 2;
-    const barnImg = this.add.image(barnX, barnY, 'barn')
-      .setScale(SCALE).setDepth(11).setInteractive({ useHandCursor: true });
+    // ── Barn (bigger: 4×3 footprint cols 2-5 rows 9-11, visual center ~3.5, 10.5) ────
+    const barnCenterX = 3.5 * td + td / 2;
+    const barnCenterY = 10.5 * td + td / 2;
+    const barnImg = this.add.image(barnCenterX, barnCenterY, 'barn')
+      .setScale(SCALE * 2.5).setDepth(11).setInteractive({ useHandCursor: true });
     barnImg.on('pointerdown', () => this.openAnimalPanel());
     addHoverHighlight(barnImg);
 
-    this.add.text(barnX, barnY - td, 'THE BARN', {
+    this.add.text(barnCenterX, barnCenterY - td * 1.5, 'THE BARN', {
       fontFamily: '"Courier New"', fontSize: '16px', color: '#cbdbfc',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(20);
 
-    // Feed trough (tile 5, 11)
-    const troughImg = this.add.image(5 * td + td / 2, 11 * td + td / 2, 'trough')
+    // Render animals inside the barn (visible near the base of the barn sprite)
+    this.renderBarnAnimals();
+
+    // Feed trough (tile 6, 11)
+    const troughImg = this.add.image(6 * td + td / 2, 11 * td + td / 2, 'trough')
       .setScale(SCALE).setDepth(9).setInteractive({ useHandCursor: true });
     troughImg.on('pointerdown', () => this.openAnimalPanel());
     addHoverHighlight(troughImg);
 
-    // ── Processing stations ────────────────────────────────────────────────────
+    // ── Processing stations (oven moved into house) ─────────────────────────
     const stations: Array<{ key: string; type: string; col: number; row: number; label: string }> = [
       { key: 'churn',   type: 'churn',   col: 3, row: 13, label: 'CHURN'   },
       { key: 'mill',    type: 'mill',    col: 5, row: 13, label: 'MILL'    },
-      { key: 'oven',    type: 'oven',    col: 7, row: 13, label: 'OVEN'    },
       { key: 'compost', type: 'compost', col: 9, row: 13, label: 'COMPOST' },
     ];
 
@@ -349,6 +360,7 @@ export class GameScene extends Phaser.Scene {
     // Animal system
     this.animalSystem = new AnimalSystem();
     this.animalSystem.deserialize(save?.animals ?? defaultSave().animals);
+    this.animalSystem.deserializeIncubating(save?.incubatingEggs);
 
     // Processing system
     this.processingSystem = new ProcessingSystem();
@@ -408,6 +420,12 @@ export class GameScene extends Phaser.Scene {
     // Harvest takes priority over tools
     if (this.cropSystem.isReadyToHarvest(tileX, tileY)) {
       this.harvestCrop(tileX, tileY);
+      return;
+    }
+
+    // Click on a placed sprinkler — pick it back up
+    if (this.sprinklers.has(`${tileX},${tileY}`)) {
+      this.pickupSprinkler(tileX, tileY);
       return;
     }
 
@@ -509,9 +527,36 @@ export class GameScene extends Phaser.Scene {
 
   openAnimalPanel(): void {
     if (this.sleepingIn || this.craftingPanel?.isVisible()) return;
-    if (this.animalPanel?.isVisible()) { this.animalPanel.close(); return; }
+    if (this.animalPanel?.isVisible()) {
+      this.animalPanel.close();
+      this.renderBarnAnimals();
+      return;
+    }
     this.animalPanel = new AnimalPanel(this, this.animalSystem, this.inventory);
     this.animalPanel.open();
+  }
+
+  private renderBarnAnimals(): void {
+    const td = TILE_SIZE * SCALE;
+    // Clear previous sprites
+    for (const s of this.animalSprites) s.destroy();
+    this.animalSprites = [];
+
+    // Place one sprite per animal in a small area in front of the barn.
+    // Barn base is near row 11; show animals on row 12 (just below the barn).
+    const animals = this.animalSystem.getAll();
+    const slotPositions: Array<[number, number]> = [
+      [2.3, 11.8], [3.1, 12.0], [3.9, 11.8], [4.7, 12.0], [5.5, 11.8],
+    ];
+    animals.forEach((animal, i) => {
+      const [sc, sr] = slotPositions[i % slotPositions.length];
+      const key = `icon-${animal.animalType}`;
+      if (this.textures.exists(key)) {
+        const img = this.add.image(sc * td + td / 2, sr * td + td / 2, key)
+          .setScale(SCALE * 0.8).setDepth(12);
+        this.animalSprites.push(img);
+      }
+    });
   }
 
   openCraftingPanel(stationType: string): void {
@@ -566,13 +611,14 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Sprinkler auto-watering: each sprinkler waters the 4 cardinal tiles
+    // Sprinkler auto-watering: each sprinkler waters a 5x5 area centered on itself
     for (const key of this.sprinklers) {
       const [sx, sy] = key.split(',').map(Number);
-      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
-        const nx = sx + dx;
-        const ny = sy + dy;
-        if (nx >= 0 && ny >= 0 && nx < MAP_COLS && ny < MAP_ROWS) {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = sx + dx;
+          const ny = sy + dy;
+          if (nx < 0 || ny < 0 || nx >= MAP_COLS || ny >= MAP_ROWS) continue;
           if (this.tileMap[ny][nx] === TILE.DIRT) {
             this.setTile(nx, ny, TILE.WATERED_DIRT);
             this.cropSystem.water(nx, ny);
@@ -616,6 +662,9 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+
+    // Refresh visible animal sprites — eggs may have hatched, animals fed, etc.
+    this.renderBarnAnimals();
 
     // Auto-save so the fully advanced state survives a reload
     SaveManager.save(this.buildSave());
@@ -728,6 +777,17 @@ export class GameScene extends Phaser.Scene {
       tileX * td + td / 2, tileY * td + td / 2, 'sprinkler',
     ).setScale(SCALE).setDepth(12);
     this.sprinklerSprites.set(`${tileX},${tileY}`, img);
+  }
+
+  private pickupSprinkler(tileX: number, tileY: number): void {
+    const key = `${tileX},${tileY}`;
+    if (!this.sprinklers.has(key)) return;
+    this.sprinklers.delete(key);
+    this.sprinklerSprites.get(key)?.destroy();
+    this.sprinklerSprites.delete(key);
+    this.inventory.addItem('sprinkler', 1);
+    this.hotBar.refresh();
+    this.showFloatingText(tileX, tileY, '+Sprinkler', 0x5fcde4);
   }
 
   // ── Fertilizer ────────────────────────────────────────────────────────
@@ -855,6 +915,7 @@ export class GameScene extends Phaser.Scene {
       crops:            this.cropSystem.serialize(),
       energy:           this.energySystem.serialize(),
       animals:          this.animalSystem.serialize(),
+      incubatingEggs:   this.animalSystem.serializeIncubating(),
       pets:             this.pets.map(p => ({ id: p.id, petType: p.petType, name: p.name, happiness: p.happiness })),
       processingQueues: this.processingSystem.serialize(),
       tutorialStep:     this.tutorialSystem.serialize(),
@@ -970,7 +1031,13 @@ export class GameScene extends Phaser.Scene {
     this.movement.update(delta);
 
     for (const pet of this.pets) {
-      pet.update(delta, this.player.tileX, this.player.tileY, (x, y) => this.isTileWalkable(x, y));
+      pet.update(
+        delta,
+        this.player.tileX,
+        this.player.tileY,
+        (x, y) => this.isTileWalkable(x, y),
+        (x, y, self) => this.pets.some(p => p !== self && p.tileX === x && p.tileY === y),
+      );
     }
 
     const idle = !this.transitioning && !this.sleepingIn &&
